@@ -1,8 +1,9 @@
 <html>
 <head>
-    <title>Pico cgi test</title>
+    <title>Da leich'sche Batterieeinsteller</title>
 </head>
 <body>
+    <h1>Do schaust</h1>
     <h1>Pico cgi test</h1>
     <p><table><!--#table--></table></p>
     <p>Test result: <!--#status--></p>

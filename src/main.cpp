@@ -14,15 +14,12 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "access_point.h"
 
 void httpd_init(void);
 
 static absolute_time_t wifi_connected_time;
 static bool led_on = false;
-
-#ifndef RUN_FREERTOS_ON_CORE
-#define RUN_FREERTOS_ON_CORE 0
-#endif
 
 #define TEST_TASK_PRIORITY				( tskIDLE_PRIORITY + 1UL )
 
@@ -136,14 +133,19 @@ void main_task(void *) {
     hostname[sizeof(hostname) - 1] = '\0';
     netif_set_hostname(&cyw43_state.netif[CYW43_ITF_STA], hostname);
 
-    printf("Connecting to WiFi...\n");
-    int on = 1;
-    while (0 != cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 3000)) {
-        printf("failed to connect.\n");
-        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, on);
-        on ^= 1;
-    } 
-    printf("Connected.\n");
+    access_point ap{.name = "auf_gehts", .password="passwort"};
+    ap.init();
+
+    if (true) {
+        printf("Connecting to WiFi...\n");
+        int on = 1;
+        while (0 != cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 3000)) {
+            printf("failed to connect.\n");
+            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, on);
+            on ^= 1;
+        } 
+        printf("Connected.\n");
+    }
 
     wifi_connected_time = get_absolute_time();
 
@@ -174,7 +176,7 @@ int main( void )
     /* Configure the hardware ready to run the demo. */
     const char *rtos_name = "FreeRTOS";
 
-    printf("Starting %s on core 0:\n", rtos_name);
+    printf("Starting %s on all cores.\n", rtos_name);
 
     TaskHandle_t task;
     xTaskCreate(main_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, TEST_TASK_PRIORITY, &task);

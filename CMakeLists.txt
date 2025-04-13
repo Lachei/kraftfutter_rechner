@@ -42,6 +42,8 @@ pico_set_lwip_httpd_content(dcdc-converter-hmtl INTERFACE
 # ----------------------------------------------------------------------------
 add_executable(dcdc-converter
         src/main.cpp
+        src/dhcpserver.c
+        src/dnsserver.c
 )
 set_property(TARGET dcdc-converter PROPERTY CXX_STANDARD 23)
 target_compile_definitions(dcdc-converter PRIVATE
