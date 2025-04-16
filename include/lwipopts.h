@@ -91,9 +91,9 @@
 #define MEMP_NUM_TCP_PCB 12
 
 // Enable cgi and ssi
-#define LWIP_HTTPD_CGI 1
-#define LWIP_HTTPD_SSI 1
-#define LWIP_HTTPD_SSI_MULTIPART 1
+#define LWIP_HTTPD_CGI 0
+#define LWIP_HTTPD_SSI 0
+#define LWIP_HTTPD_SSI_MULTIPART 0
 
 #if !NO_SYS
 #define TCPIP_THREAD_STACKSIZE 2048 // mDNS needs more stack
