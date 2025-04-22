@@ -14,6 +14,7 @@ endif()
 include(pico_sdk_import.cmake)
 include(pico_extras_import_optional.cmake)
 include(FreeRTOS_Kernel_import.cmake)
+include(cmake/html_pages_library.cmake)
 
 add_compile_options(-Wall)
 
@@ -29,11 +30,12 @@ endif()
 # ----------------------------------------------------------------------------
 # Website content
 # ----------------------------------------------------------------------------
-pico_add_library(dcdc-converter-hmtl NOFLAG)
-pico_set_lwip_httpd_content(dcdc-converter-hmtl INTERFACE
+add_html_pages_library(NAME dcdc-converter-html SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/http_content/404.html
-        ${CMAKE_CURRENT_SOURCE_DIR}/http_content/index.shtml
-        ${CMAKE_CURRENT_SOURCE_DIR}/http_content/test.shtml
+        ${CMAKE_CURRENT_SOURCE_DIR}/http_content/index.html
+        ${CMAKE_CURRENT_SOURCE_DIR}/http_content/internet
+        ${CMAKE_CURRENT_SOURCE_DIR}/http_content/overview
+        ${CMAKE_CURRENT_SOURCE_DIR}/http_content/settings
 )
 
 
@@ -52,15 +54,15 @@ target_compile_definitions(dcdc-converter PRIVATE
 )
 target_include_directories(dcdc-converter PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${PICO_LWIP_CONTRIB_PATH}/apps/httpd
 )
 target_link_libraries(dcdc-converter
         pico_cyw43_arch_lwip_sys_freertos
-        pico_lwip_http
         pico_lwip_mdns
         pico_stdlib
         FreeRTOS-Kernel-Heap4 # FreeRTOS kernel and dynamic heap
-        dcdc-converter-hmtl
+        dcdc-converter-html
 )
 pico_add_extra_outputs(dcdc-converter)
+pico_enable_stdio_usb(dcdc-converter 1)
+pico_enable_stdio_uart(dcdc-converter 0)
 

@@ -15,7 +15,7 @@
 
 #include "log_storage.h"
 #include "access_point.h"
-#include "tcp_server/tcp_server.h"
+#include "webserver.h"
 
 #define TEST_TASK_PRIORITY ( tskIDLE_PRIORITY + 1UL )
 
@@ -42,18 +42,6 @@ void main_task(void *) {
     access_point ap{.name = "auf_gehts", .password="passwort"};
     ap.init();
 
-    using tcp_server_typed = tcp_server<2, 0, 0, 0>;
-    tcp_server_typed tcp( tcp_server_typed::config{
-        .get_endpoints = {
-            tcp_server_typed::endpoint{"/index", [](std::string_view path_rest, const tcp_server_typed::headers &headers, std::string_view body) {
-                return std::string{"endpoint 1"};
-            }},
-            tcp_server_typed::endpoint{"/antoher_route", [](std::string_view path_rest, const tcp_server_typed::headers &headers, std::string_view body) {
-                return std::string{"endpoint 2"};
-            }}
-        },
-    });
-
     if (true) {
         LogInfo("Connecting to WiFi...");
         int on = 1;
@@ -64,14 +52,24 @@ void main_task(void *) {
         } 
         LogInfo("Connected.");
     }
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
 
     mdns_resp_init();
     mdns_resp_add_netif(&cyw43_state.netif[CYW43_ITF_STA], hostname);
     mdns_resp_add_service(&cyw43_state.netif[CYW43_ITF_STA], "lachei_tcp_server", "_http", DNSSD_PROTO_TCP, 80, mdns_response_callback, NULL);
 
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+
+    Webserver().start();
+
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
+
     LogInfo(std::string("Ready, running http at ") + ip4addr_ntoa(netif_ip4_addr(netif_list)));
 
+    bool state;
     while(true) {
+        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, state);
+        state = !state;
         vTaskDelay(100);
     }
 

@@ -3,9 +3,10 @@
 #include <array>
 #include <string_view>
 #include <string>
+#include <iostream>
 
-constexpr int MAX_LOGS{256};
-constexpr int MAX_LOG_LENGTH{256};
+constexpr int MAX_LOGS{8};
+constexpr int MAX_LOG_LENGTH{128};
 
 enum struct log_severity {
 	Info,
@@ -28,8 +29,8 @@ struct log_storage {
 	log_storage() = default;
 
 	struct entry {
-		log_severity severity;
-		std::array<char, MAX_LOG_LENGTH> message;
+		log_severity severity{log_severity::Info};
+		std::array<char, MAX_LOG_LENGTH> message{};
 	};
 	std::array<entry, MAX_LOGS> logs{};
 	int write_idx{};
@@ -37,8 +38,9 @@ struct log_storage {
 	constexpr void push(log_severity severity, std::string_view message) noexcept {
 		if (severity < min_log_level)
 			return;
-		if (message.size() >= MAX_LOG_LENGTH)
+		if (message.size() + 1 >= MAX_LOG_LENGTH)
 			message = message.substr(0, MAX_LOG_LENGTH - 2);
+		std::cout << message << '\n';
 		logs[write_idx].severity = severity;
 		std::copy(message.begin(), message.end(), logs[write_idx].message.data());
 		logs[write_idx].message[message.size()] = '\0';
@@ -64,7 +66,7 @@ struct log_storage {
 				res += "[Fatal  ]: ";
 				break;
 			}
-			res += message;
+			res.append(message.data());
 			res += '\n';
 		}
 		return res;

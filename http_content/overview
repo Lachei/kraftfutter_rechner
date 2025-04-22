@@ -1,0 +1,15 @@
+<html>
+ <body>
+  Messwerte:<p>
+  Logs:<p><p>
+  <code id="l"></code>
+ </body>
+ <script>
+ var l=document.getElementById("l");
+ setInterval(async ()=>{
+  let logs=await fetch("logs");
+  let t=await logs.text();
+  l.innerHTML=t.replace(/(?:\r\n|\r|\n)/g, '<br>');
+ },1000);
+ </script>
+</html>
