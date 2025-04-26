@@ -1,12 +1,11 @@
 #pragma once
 
-#include <array>
-#include <string_view>
-#include <string>
+#include <print>
 #include <iostream>
+#include "static_types.h"
 
-constexpr int MAX_LOGS{8};
-constexpr int MAX_LOG_LENGTH{128};
+constexpr int MAX_LOGS{32};
+constexpr int MAX_LOG_LENGTH{64};
 
 enum struct log_severity {
 	Info,
@@ -19,62 +18,103 @@ enum struct log_severity {
  * @brief Error storage that is a circular buffer to hold all errors from the past
  * and overwrites old errors upon too many errors
  */
-template<log_severity min_log_level = log_severity::Info>
 struct log_storage {
 	static log_storage& Default() {
-		static log_storage<> storage{};
+		static log_storage storage{};
 		return storage;
 	}
 
-	log_storage() = default;
-
-	struct entry {
+	struct log_entry{
 		log_severity severity{log_severity::Info};
-		std::array<char, MAX_LOG_LENGTH> message{};
+		static_string<MAX_LOG_LENGTH> message{};
 	};
-	std::array<entry, MAX_LOGS> logs{};
-	int write_idx{};
+
+	static_ring_buffer<log_entry, MAX_LOGS> logs{};
+	log_severity cur_severity{log_severity::Info};
 	
-	constexpr void push(log_severity severity, std::string_view message) noexcept {
-		if (severity < min_log_level)
-			return;
-		if (message.size() + 1 >= MAX_LOG_LENGTH)
-			message = message.substr(0, MAX_LOG_LENGTH - 2);
-		std::cout << message << '\n';
-		logs[write_idx].severity = severity;
-		std::copy(message.begin(), message.end(), logs[write_idx].message.data());
-		logs[write_idx].message[message.size()] = '\0';
-		write_idx = (write_idx + 1) % MAX_LOGS;
+	constexpr log_entry* push(log_severity severity, std::string_view static_message = {}) noexcept {
+		if (severity < cur_severity)
+			return {};
+		log_entry *entry = logs.push();
+		if (!entry)
+			return {};
+		entry->severity = severity;
+		if (!static_message.empty())
+			entry->message.fill(static_message);
+		return entry;
 	}
-	std::string print_errors() const noexcept {
-		std::string res;
-		int i{};
+	template<int N>
+	int print_errors(static_string<N> &dst) const noexcept {
+		int s{};
 		for (const auto &[sev, message]: logs) {
-			if (i++ == write_idx) 
-				res += "next_write: ";
 			switch(sev) {
 			case log_severity::Info:
-				res += "[Info   ]: ";
+				s += dst.append_formatted("[Info   ]: {}\n", message.view);
 				break;
 			case log_severity::Warning:
-				res += "[Warning]: ";
+				s += dst.append_formatted("[Warning]: {}\n", message.view);
 				break;
 			case log_severity::Error:
-				res += "[Error  ]: ";
+				s += dst.append_formatted("[Error  ]: {}\n", message.view);
 				break;
 			case log_severity::Fatal:
-				res += "[Fatal  ]: ";
+				s += dst.append_formatted("[Fatal  ]: {}\n", message.view);
 				break;
 			}
-			res.append(message.data());
-			res += '\n';
 		}
-		return res;
+		return s;
 	}
 };
 
-constexpr void LogInfo(std::string_view message) { log_storage<>::Default().push(log_severity::Info, message); }
-constexpr void LogWarning(std::string_view message) { log_storage<>::Default().push(log_severity::Warning, message); }
-constexpr void LogError(std::string_view message) { log_storage<>::Default().push(log_severity::Error, message); }
-constexpr void LogFatal(std::string_view message) { log_storage<>::Default().push(log_severity::Fatal, message); }
+// ---------------------------------------------------------------------------------------
+// Formatted logging
+// ---------------------------------------------------------------------------------------
+template<typename... Args>
+inline void LogInfo(std::format_string<Args...> fmt, Args&&... args) { 
+	std::println(fmt, std::forward<Args>(args)...);
+	return;
+	auto *entry = log_storage::Default().push(log_severity::Info); 
+	if (entry) {
+		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
+		std::println("[Info   ]: {}", entry->message.view);
+	}
+}
+template<typename... Args>
+inline void LogWarning(std::format_string<Args...> fmt, Args&&... args) { 
+	std::println(fmt, std::forward<Args>(args)...);
+	return;
+	auto *entry = log_storage::Default().push(log_severity::Warning); 
+	if (entry) {
+		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
+		std::println("[Warning]: {}", entry->message.view);
+	}
+}
+template<typename... Args>
+inline void LogError(std::format_string<Args...> fmt, Args&&... args) { 
+	std::println(fmt, std::forward<Args>(args)...);
+	return;
+	auto *entry = log_storage::Default().push(log_severity::Error); 
+	if (entry) {
+		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
+		std::println("[Error  ]: {}", entry->message.view);
+	}
+}
+template<typename... Args>
+inline void LogFatal(std::format_string<Args...> fmt, Args&&... args) { 
+	std::println(fmt, std::forward<Args>(args)...);
+	return;
+	auto *entry = log_storage::Default().push(log_severity::Fatal); 
+	if (entry) {
+		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
+		std::println("[Fatal  ]: {}", entry->message.view);
+	}
+}
+
+// ---------------------------------------------------------------------------------------
+// Static string logging
+// ---------------------------------------------------------------------------------------
+void LogInfo(std::string_view message) { log_storage::Default().push(log_severity::Info, message); std::println("[Info   ]: {}", message);}
+void LogWarning(std::string_view message) { log_storage::Default().push(log_severity::Warning, message); std::println("[Warning]: {}", message);}
+void LogError(std::string_view message) { log_storage::Default().push(log_severity::Error, message); std::println("[Error  ]: {}", message);}
+void LogFatal(std::string_view message) { log_storage::Default().push(log_severity::Fatal, message); std::println("[Fatal  ]: {}", message);}
 

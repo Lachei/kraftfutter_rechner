@@ -35,7 +35,7 @@
  * application requirements.
  *
  * THESE PARAMETERS ARE DESCRIBED WITHIN THE 'CONFIGURATION' SECTION OF THE
- * FreeRTOS API DOCUMENTATION AVAILABLE ON THE FreeRTOS.org WEB SITE.
+ * FreeRTOS API DOCUMENTATION AVAILABLE ON THE FreeRTOS.org WEB SITE1
  *
  * See http://www.freertos.org/a00110.html
  *----------------------------------------------------------*/
@@ -45,6 +45,8 @@
 #define configUSE_TICKLESS_IDLE                 0
 #define configUSE_IDLE_HOOK                     0
 #define configUSE_TICK_HOOK                     0
+#define configCPU_CLOCK_HZ                      125000000/* Looking at runtime.c in the RPI 2040 SDK, the sys clock frequency is 125MHz */
+#define configSYSTICK_CLOCK_HZ                  1000000  /* This is always 1MHz on ARM I think.... */
 #define configTICK_RATE_HZ                      ( ( TickType_t ) 1000 )
 #define configMAX_PRIORITIES                    32
 #define configMINIMAL_STACK_SIZE                ( configSTACK_DEPTH_TYPE ) 512
@@ -72,13 +74,13 @@
 /* Memory allocation related definitions. */
 #define configSUPPORT_STATIC_ALLOCATION         0
 #define configSUPPORT_DYNAMIC_ALLOCATION        1
-#define configTOTAL_HEAP_SIZE                   (128*1024)
+#define configTOTAL_HEAP_SIZE                   (64*1024)
 #define configAPPLICATION_ALLOCATED_HEAP        0
 
 /* Hook function related definitions. */
 #define configCHECK_FOR_STACK_OVERFLOW          0
 #define configUSE_MALLOC_FAILED_HOOK            0
-#define configUSE_DAEMON_TASK_STARTUP_HOOK      0
+#define configUSE_DAEMON_TASK_STARTUP_HOOK      0 /* call vApplicationDaemonTaskStartupHook() when the scheduler is started */
 
 /* Run time and task stats gathering related definitions. */
 #define configGENERATE_RUN_TIME_STATS           0

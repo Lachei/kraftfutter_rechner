@@ -1,5 +1,6 @@
 #pragma once
 
+#include "static_types.h"
 #include "tcp_server/tcp_server.h"
 #include "dcdc-converter-html.h"
 
@@ -11,7 +12,7 @@ tcp_server_typed& Webserver() {
 			res.res_set_status_line(HTTP_VERSION, status);
 			res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
 			res.res_add_header("Content-Type", "text/html");
-			res.res_add_header("Content-Length", std::to_string(page.size()));
+			res.res_add_header("Content-Length", static_format<8>("{}", page.size()));
 			res.res_write_body(page);
 		};
 	};
@@ -20,9 +21,10 @@ tcp_server_typed& Webserver() {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
 		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
 		res.res_add_header("Content-Type", "text/html");
-		const auto log=log_storage<>::Default().print_errors();
-		res.res_add_header("Content-Length", std::to_string(log.size()));
-		res.res_write_body(log);
+		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
+		res.res_write_body(); // add header end sequence
+		int body_size = log_storage::Default().print_errors(res.buffer);
+		format_to_sv(length_hdr, "{}", body_size);
 	};
 	static tcp_server_typed webserver{
 		.port = 80,

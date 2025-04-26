@@ -1,8 +1,9 @@
 #pragma once
 
-#include <array>
 #include <functional>
-#include <string_view>
+#include <atomic>
+
+#include "static_types.h"
 
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
@@ -28,40 +29,41 @@ struct EndpointFlags{
 	bool path_match: 1 {true}; // path for endpoint has to match, not only 
 };
 
+struct header {
+	std::string_view key;
+	std::string_view value;
+};
+template<int max_headers>
+struct headers {
+	static_vector<header, max_headers> headers{};
+	header* begin() { return headers.begin(); }
+	header* end() { return headers.end(); }
+	std::string_view get_header(std::string_view key) {
+		for (auto & [k, value]: headers)
+		if (key == k)
+			return value;
+		return {};
+	}
+};
+
 /** @brief Tcp server that serves text data according to path specification.
   * The returned content can be freely configured via callbacks via callbacks 
   * @note The tcp server instantly discards any connection after the response was sent.*/
 template<int get_size, int post_size, int put_size = 0, int delete_size = 0, int max_path_length = 256, int max_headers = 32, int buf_size = 2048, int message_buffers = 2>
 struct tcp_server {
-	struct header {
-		std::string_view key;
-		std::string_view value;
-	};
-	struct headers {
-		std::array<header, max_headers> data{};
-		uint32_t size{};
-		header* begin() { return data.data(); }
-		header* end() { return data.data() + size; }
-		std::string_view get_header(std::string_view key) {
-			for (auto & [k, value]: *this)
-				if (key == k)
-					return value;
-			return {};
-		}
-	};
 	/**
 	 * @brief Struct with a full http frame for both sending and recieving.
 	 * The struct has only 1 member, the `buffer` which really holds information,
 	 * all other members only give a more structured view to this backing buffer.
 	 */
 	struct message_buffer{
-		uint16_t size{};
-		std::array<char, buf_size> buffer{};
+		std::atomic<bool> used{};
+		static_string<buf_size> buffer{};
 		std::string_view method{}; // set to the method for a request http frame, else is empty and cannot be written
 		std::string_view path{}; // set to the path of a request http frame, else is empty and can not be written
 		std::string_view http_version{}; // version of the http protocol, normally HTTP/1.1
 		std::string_view status{}; // status code followed by a space and a possibly empty reason string
-		headers headers_view{}; // actually only contains std::string views to underlying buffer
+		headers<max_headers> headers_view{}; // actually only contains std::string views to underlying buffer
 		std::string_view body{};
 
 		// ------------------------------------------------------
@@ -80,11 +82,14 @@ struct tcp_server {
 		void res_set_status_line(std::string_view http_version, std::string_view status);
 		/** @brief add a header to the headers_view (also written to the backing buffer)
 		  * @note erases the body view as it becomes invalid and has to be rewritten
+		  * @returns header view with the key and value at their place in  the backing buffer, if failed
+		  * the string views in the header view are empty
 		  * @logs Warning if add_header is called when body is not empty*/
-		void res_add_header(std::string_view key, std::string_view value);
+		header res_add_header(std::string_view key, std::string_view value);
 		/** @brief writes the string_view the end of the backing buffer directly after the header section
 		  * and sets the internal body variable to exactly this string */
-		void res_write_body(std::string_view body);
+		void res_write_body(std::string_view body = {});
+		void clear() { used = {}; buffer.clear(); method = {}; path = {}; http_version = {}; status = {}; headers_view.headers.clear(); body = {}; }
 	};
 	using endpoint_callback = std::function<void(const message_buffer &request, message_buffer& response)>;
 	struct endpoint {
@@ -176,7 +181,7 @@ constexpr static err_t tcp_server_result(void *arg, int status) {
 		LogInfo("Server success");
 		return ERR_OK;
 	}
-	LogWarning("Server failed " + std::to_string(status));
+	LogWarning("Server failed {}", status);
 	server.complete = true;
 	err_t err = ERR_OK;
 	if (server.client_pcb != NULL) {
@@ -187,7 +192,7 @@ constexpr static err_t tcp_server_result(void *arg, int status) {
 		tcp_err(server.client_pcb, NULL);
 		err = tcp_close(server.client_pcb);
 		if (err != ERR_OK) {
-			LogError("close failed calling abort: " + std::to_string(err));
+			LogError("close failed calling abort: {}", err);
 			tcp_abort(server.client_pcb);
 			err = ERR_ABRT;
 		}
@@ -198,8 +203,6 @@ constexpr static err_t tcp_server_result(void *arg, int status) {
 
 template template_args
 constexpr static err_t tcp_server_sent(void *arg, struct tcp_pcb *tpcb, u16_t len) {
-	// LogInfo("Sent " + std::to_string(len) + " bytes successful");
-
 	return ERR_OK;
 }
 
@@ -220,14 +223,12 @@ constexpr static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct p
 		bool recieve_success{};
 		for (auto &buffer: server.recieve_buffers) {
 			++recieve_buffer;
-			if (buffer.size > 0)
+			if (buffer.used.exchange(true))
 				continue;
-			buffer.size = 1;	// reserve buffer
-			buffer.size = pbuf_copy_partial(p, buffer.buffer.data(), p->tot_len, 0);
+			buffer.buffer.set_size(pbuf_copy_partial(p, buffer.buffer.data(), p->tot_len, 0));
 			server.process_request(recieve_buffer);
 			recieve_success = true;
 			break;
-			// TODO: notify rtos recieve task
 		}
 		if (!recieve_success)
 			LogError("Could not recieve message, no free recieve buffer");
@@ -246,7 +247,7 @@ constexpr static err_t tcp_server_poll(void *arg, struct tcp_pcb *tpcb) {
 template template_args
 constexpr static void tcp_server_err(void *arg, err_t err) {
 	if (err != ERR_ABRT) {
-		LogInfo("tcp_client_err_fn " + std::to_string(err));
+		LogInfo("tcp_client_err_fn {}", err);
 		tcp_server_result template_args_pure(arg, err);
 	}
 }
@@ -266,7 +267,7 @@ constexpr static err_t tcp_server_accept (void *arg, struct tcp_pcb *client_pcb,
 	if (server.client_pcb) {
 		err = tcp_close(server.client_pcb);
 		if (err != ERR_OK) {
-			LogError("close failed calling abort: " + std::to_string(err));
+			LogError("close failed calling abort: {}", err);
 			tcp_abort(server.client_pcb);
 			err = ERR_ABRT;
 		}
@@ -289,9 +290,7 @@ constexpr static err_t tcp_server_accept (void *arg, struct tcp_pcb *client_pcb,
 template template_args
 void tcp_server template_args_pure::message_buffer::req_update_structured_views() {
 	// request line
-	std::string_view buffer_view{buffer.data(), size};
-	LogInfo("Parsing message:");
-	LogInfo(buffer_view);
+	std::string_view buffer_view{buffer.view};
 	method = tcp_server_internal::extract_word(buffer_view);
 	path = tcp_server_internal::extract_word(buffer_view);
 	http_version = tcp_server_internal::extract_word(buffer_view);
@@ -300,14 +299,12 @@ void tcp_server template_args_pure::message_buffer::req_update_structured_views(
 	// headers
 	for (std::string_view key = tcp_server_internal::extract_word(buffer_view), value = tcp_server_internal::extract_until_newline(buffer_view);
 		!key.empty(); key = tcp_server_internal::extract_word(buffer_view), value = tcp_server_internal::extract_until_newline(buffer_view)) {
-		if (headers_view.size == max_headers) {
-			LogWarning("req_update_structured_views() too many header fields, skipping");
-			continue;
-		}
-		// add the header and remove the ':' from the key
+
 		key.remove_suffix(key.empty() ? 0: 1);
-		headers_view.data[headers_view.size++] = header{key, value};
-		LogInfo("New header: " + std::string(key) + ", " + std::string(value));
+		if (!headers_view.headers.push(header{key, value}))
+			LogWarning("req_update_structured_views() Failed to add the following header:");
+
+		LogInfo("New header: {}, {}", key, value);
 		if (!tcp_server_internal::extract_newline(buffer_view))
 			LogWarning("req_update_structured_views() did not find newline sequence after header");
 	}
@@ -320,85 +317,51 @@ void tcp_server template_args_pure::message_buffer::req_update_structured_views(
 template template_args
 void tcp_server template_args_pure::message_buffer::res_set_status_line(std::string_view http_version, std::string_view status) {
 	// sanity checks
-	if (size != 0) {
-		size = 0;
+	if (!buffer.empty()) {
+		buffer.clear();
 		LogWarning("res_set_status_line() size != 0, is reset");
 	}
-	if (headers_view.size != 0) {
-		headers_view.size = 0;
+	if (!headers_view.headers.empty()) {
+		headers_view.headers.clear();
 		LogWarning("res_set_status_line() headers_view.size != 0, is reset");
 	}
-	if (body.size()) {
+	if (!body.empty()) {
 		body = {};
 		LogWarning("res_set_status_line() body.size() != 0, is reset");
-	}
-	if (http_version.size() + status.size() + 5 >= buf_size) {
-		LogError("res_set_status_line() Not enough space in the buffer to hold all information, doing nothing.");
-		return;
 	}
 	method = {};
 	path = {};
 
-	this->http_version = std::string_view(buffer.data() + size, http_version.size());
-	size += http_version.copy(buffer.data() + size, std::string_view::npos); // copy full http_version
-	buffer[size++] = ' ';
-	this->status = std::string_view(buffer.data() + size, status.size());
-	size += status.copy(buffer.data() + size, std::string_view::npos);
-	buffer[size++] = '\r';
-	buffer[size++] = '\n';
-	buffer[size] = '\0'; // nullterminator is always written, but size not increased to push the nullterminator further back on next write
+	buffer.append_formatted("{} {}\r\n", http_version, status);
+	this->http_version = buffer.view;
+	this->status = buffer.view;
 }
 
 template template_args
-void tcp_server template_args_pure::message_buffer::res_add_header(std::string_view key, std::string_view value) {
+header tcp_server template_args_pure::message_buffer::res_add_header(std::string_view key, std::string_view value) {
 	// sanity checks
-	if (body.size()) {
+	if (!body.empty()) {
 		body = {};
-		LogWarning("res_set_status_line() body.size() != 0, is reset");
+		LogWarning("res_add_header() body.size() != 0, is reset");
 	}
-	if (headers_view.size >= max_headers) {
-		LogError("res_set_status_line() No free header available, doing nothing.");
-		return;
-	}
-	if (size + key.size() + value.size() + 5 >= buf_size) {
-		LogError("res_set_status_line() Not enough space in the buffer to hold all information, doing nothing.");
-		return;
-	}
-	
-	this->headers_view.data[headers_view.size].key = std::string_view(buffer.data() + size, key.size());
-	size += key.copy(buffer.data() + size, std::string_view::npos);
-	buffer[size++] = ':';
-	buffer[size++] = ' ';
-	this->headers_view.data[headers_view.size].key = std::string_view(buffer.data() + size, value.size());
-	size += value.copy(buffer.data() + size, std::string_view::npos);
-	buffer[size++] = '\r';
-	buffer[size++] = '\n';
-	buffer[size] = '\0'; // nullterminator is always written, but size not increased to push the nullterminator further back on next write
 
-	++headers_view.size;
+	int s = buffer.view.size();
+	buffer.append_formatted("{}: {}\r\n", key, value);
+	if (!this->headers_view.headers.push(header{buffer.view.substr(s), buffer.view.substr(s + key.size() + 2)})) {
+		LogWarning("Reached header limit {}", max_headers);
+		return {};
+	}
+	return *(this->headers_view.end() - 1);
 }
 
 template template_args
 void tcp_server template_args_pure::message_buffer::res_write_body(std::string_view body) {
-	// sanity checks
-	bool is_first = this->body.empty();
-	if (size + body.size() + (is_first ? 3: 1) >= buf_size) {
-		LogError("res_set_status_line() Not enough space in the buffer to hold all information, doing nothing.");
-		return;
-	}
-	
-	if (is_first) {
-		buffer[size++] = '\r';
-		buffer[size++] = '\n';
-	}
-	this->body = std::string_view(buffer.data() + size, body.size());
-	size += body.copy(buffer.data() + size, std::string_view::npos);
-	buffer[size] = '\0'; // nullterminator is always written, but size not increased to push the nullterminator further back on next write
-}
-template<typename M, typename S>
-constexpr M& operator<<(M& message_buffer, const S &data) {
-	message_buffer.res_write_body({data.begin(), data.end()});
-	return message_buffer;
+	const char *s = this->body.empty() ? buffer.view.end(): this->body.begin();
+	if (this->body.empty())
+		buffer.append("\r\n");
+
+	buffer.append(body);
+	body = std::string_view{s, buffer.view.end()};
 }
 
 template template_args
@@ -413,7 +376,7 @@ err_t tcp_server template_args_pure::start() {
 	tcp_setprio(pcb, 10);
 	err_t err = tcp_bind(pcb, IP_ANY_TYPE, port);
 	if (err) {
-		LogError("failed to bind to port " + std::to_string(port));
+		LogError("failed to bind to port {}", port);
 		return ERR_ABRT;
 	}
 	
@@ -445,7 +408,7 @@ err_t tcp_server template_args_pure::stop() {
 		tcp_err(client_pcb, NULL);
 		err = tcp_close(client_pcb);
 		if (err != ERR_OK) {
-			LogError("close failed calling abort: " + std::to_string(err));
+			LogError("close failed calling abort: {}", err);
 			tcp_abort(client_pcb);
 			err = ERR_ABRT;
 		}
@@ -471,20 +434,20 @@ void tcp_server template_args_pure::process_request(uint32_t recieve_buffer_idx)
 	auto &recieve_buffer = recieve_buffers[recieve_buffer_idx];
 
 	int free_send_idx = 0;
-	for (; (uint32_t)free_send_idx < send_buffers.size() && send_buffers[free_send_idx].size != 0 ; ++free_send_idx);
+	// the following also atomically reservers a buffer
+	for (; (uint32_t)free_send_idx < send_buffers.size() && send_buffers[free_send_idx].used.exchange(true) ; ++free_send_idx);
 	if ((uint32_t)free_send_idx >= send_buffers.size()) {
-		LogError("No free buffer for sending found, dropping response");
-		recieve_buffer.size = 0;
+		LogError("No free buffer for sending found, dropping request");
+		recieve_buffer.clear();
 		return;
 	}
 
 	auto &send_buffer = send_buffers[free_send_idx];
-	send_buffer.size = 1;	// reserve
 
 	LogInfo("Parsing request frame");
 	recieve_buffer.req_update_structured_views(); // parsing the recieve buffer
 
-	LogInfo("Processing request frame and generating result" + std::string(recieve_buffer.method));
+	LogInfo("Processing request frame and generating result {} {}", recieve_buffer.method, recieve_buffer.path);
 	const auto prefixed_callback_call = [this, &recieve_buffer, &send_buffer](const auto &endpoints) {
 		LogInfo("Standard processing");
 		for (const auto &[flags, prefix, callback]: endpoints) {
@@ -507,23 +470,22 @@ void tcp_server template_args_pure::process_request(uint32_t recieve_buffer_idx)
 	else
 		default_endpoint_cb(recieve_buffer, send_buffer);
 
-	// release the recieve buffer by setting its size to 0
 	send_data(free_send_idx);
-	recieve_buffer.size = 0;
-	send_buffer.size = 0;
+	recieve_buffer.clear();
+	send_buffer.clear();
 	LogInfo("process_request() end");
 }
 
 template template_args
 err_t tcp_server template_args_pure::send_data(uint32_t send_buffer_index) {
-	err_t err = tcp_write(client_pcb, send_buffers[send_buffer_index].buffer.data(), send_buffers[send_buffer_index].size, 0);
+	err_t err = tcp_write(client_pcb, send_buffers[send_buffer_index].buffer.view.data(), send_buffers[send_buffer_index].buffer.view.size(), 0);
 	if (err != ERR_OK) {
-		LogError("Failed to write data " + std::to_string(err));
+		LogError("Failed to write data {}", err);
 		return tcp_server_internal::tcp_server_result template_args_pure(this, -1);
 	}
 	err = tcp_output(client_pcb);
 	if (err != ERR_OK) {
-		LogError("Failed to output data " + std::to_string(err));
+		LogError("Failed to output data {}", err);
 		return tcp_server_internal::tcp_server_result template_args_pure(this, -1);
 	}
 	return ERR_OK;
