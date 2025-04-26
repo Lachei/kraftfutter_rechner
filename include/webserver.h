@@ -22,9 +22,11 @@ tcp_server_typed& Webserver() {
 		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
 		res.res_add_header("Content-Type", "text/html");
 		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
+		LogInfo("content-length-header value size {}", length_hdr.size());
 		res.res_write_body(); // add header end sequence
 		int body_size = log_storage::Default().print_errors(res.buffer);
-		format_to_sv(length_hdr, "{}", body_size);
+		if (0 == format_to_sv(length_hdr, "{}", body_size))
+			LogError("Failed to write header length");
 	};
 	static tcp_server_typed webserver{
 		.port = 80,

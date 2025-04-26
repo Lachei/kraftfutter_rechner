@@ -7,7 +7,7 @@
  <script>
  var l=document.getElementById("l");
  setInterval(async ()=>{
-  let logs=await fetch("logs");
+  let logs=await fetch("logs", {signal: AbortSignal.timeout(500)});
   let t=await logs.text();
   l.innerHTML=t.replace(/(?:\r\n|\r|\n)/g, '<br>');
  },1000);

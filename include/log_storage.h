@@ -71,8 +71,6 @@ struct log_storage {
 // ---------------------------------------------------------------------------------------
 template<typename... Args>
 inline void LogInfo(std::format_string<Args...> fmt, Args&&... args) { 
-	std::println(fmt, std::forward<Args>(args)...);
-	return;
 	auto *entry = log_storage::Default().push(log_severity::Info); 
 	if (entry) {
 		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
@@ -81,8 +79,6 @@ inline void LogInfo(std::format_string<Args...> fmt, Args&&... args) {
 }
 template<typename... Args>
 inline void LogWarning(std::format_string<Args...> fmt, Args&&... args) { 
-	std::println(fmt, std::forward<Args>(args)...);
-	return;
 	auto *entry = log_storage::Default().push(log_severity::Warning); 
 	if (entry) {
 		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
@@ -91,8 +87,6 @@ inline void LogWarning(std::format_string<Args...> fmt, Args&&... args) {
 }
 template<typename... Args>
 inline void LogError(std::format_string<Args...> fmt, Args&&... args) { 
-	std::println(fmt, std::forward<Args>(args)...);
-	return;
 	auto *entry = log_storage::Default().push(log_severity::Error); 
 	if (entry) {
 		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
@@ -101,8 +95,6 @@ inline void LogError(std::format_string<Args...> fmt, Args&&... args) {
 }
 template<typename... Args>
 inline void LogFatal(std::format_string<Args...> fmt, Args&&... args) { 
-	std::println(fmt, std::forward<Args>(args)...);
-	return;
 	auto *entry = log_storage::Default().push(log_severity::Fatal); 
 	if (entry) {
 		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);

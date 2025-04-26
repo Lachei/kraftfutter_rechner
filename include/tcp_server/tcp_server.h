@@ -213,7 +213,7 @@ constexpr static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct p
 		LogError("tcp_server_recv() failed");
 		return tcp_server_result template_args_pure(arg, -1);
 	}
-	LogInfo("Recieving package");
+	LogInfo("Message recieved");
 	tcp_server template_args_pure& server = reinterpret_cast<tcp_server template_args_pure&>(*(char*)arg);
 	if (p->tot_len > buf_size)
 		LogError("Message too big, could not recieve");
@@ -234,7 +234,6 @@ constexpr static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct p
 			LogError("Could not recieve message, no free recieve buffer");
 	}
 	pbuf_free(p);
-	LogInfo("Message recieved.");
 	return ERR_OK;
 }
 
@@ -304,7 +303,6 @@ void tcp_server template_args_pure::message_buffer::req_update_structured_views(
 		if (!headers_view.headers.push(header{key, value}))
 			LogWarning("req_update_structured_views() Failed to add the following header:");
 
-		LogInfo("New header: {}, {}", key, value);
 		if (!tcp_server_internal::extract_newline(buffer_view))
 			LogWarning("req_update_structured_views() did not find newline sequence after header");
 	}
@@ -356,12 +354,12 @@ header tcp_server template_args_pure::message_buffer::res_add_header(std::string
 
 template template_args
 void tcp_server template_args_pure::message_buffer::res_write_body(std::string_view body) {
-	const char *s = this->body.empty() ? buffer.view.end(): this->body.begin();
 	if (this->body.empty())
 		buffer.append("\r\n");
+	const char *s = this->body.empty() ? buffer.view.end(): this->body.begin();
 
 	buffer.append(body);
-	body = std::string_view{s, buffer.view.end()};
+	this->body = std::string_view{s, buffer.view.end()};
 }
 
 template template_args
@@ -426,7 +424,6 @@ err_t tcp_server template_args_pure::stop() {
 
 template template_args
 void tcp_server template_args_pure::process_request(uint32_t recieve_buffer_idx) {
-	LogInfo("process_request() start");
 	if (recieve_buffer_idx >= recieve_buffers.size()) {
 		LogError("Impossible recieve buffer idx");
 		return;
@@ -444,12 +441,10 @@ void tcp_server template_args_pure::process_request(uint32_t recieve_buffer_idx)
 
 	auto &send_buffer = send_buffers[free_send_idx];
 
-	LogInfo("Parsing request frame");
 	recieve_buffer.req_update_structured_views(); // parsing the recieve buffer
 
 	LogInfo("Processing request frame and generating result {} {}", recieve_buffer.method, recieve_buffer.path);
 	const auto prefixed_callback_call = [this, &recieve_buffer, &send_buffer](const auto &endpoints) {
-		LogInfo("Standard processing");
 		for (const auto &[flags, prefix, callback]: endpoints) {
 			if ((flags.path_match && recieve_buffer.path == prefix.data()) ||
 			    (!flags.path_match && recieve_buffer.path.starts_with(prefix.data()))) {
@@ -473,12 +468,12 @@ void tcp_server template_args_pure::process_request(uint32_t recieve_buffer_idx)
 	send_data(free_send_idx);
 	recieve_buffer.clear();
 	send_buffer.clear();
-	LogInfo("process_request() end");
 }
 
 template template_args
 err_t tcp_server template_args_pure::send_data(uint32_t send_buffer_index) {
-	err_t err = tcp_write(client_pcb, send_buffers[send_buffer_index].buffer.view.data(), send_buffers[send_buffer_index].buffer.view.size(), 0);
+	auto &buffer = send_buffers[send_buffer_index].buffer;
+	err_t err = tcp_write(client_pcb, buffer.view.data(), buffer.view.size(), 0);
 	if (err != ERR_OK) {
 		LogError("Failed to write data {}", err);
 		return tcp_server_internal::tcp_server_result template_args_pure(this, -1);
