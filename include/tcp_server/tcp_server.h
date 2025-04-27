@@ -9,6 +9,52 @@
 #include "lwip/tcp.h"
 #include "log_storage.h"
 
+// ------------------------------------------------------------------------------
+// global helpers (maybe put into separate source)
+// ------------------------------------------------------------------------------
+
+/** @brief Extract a word from the beginning of content, never reading over newlines.
+ * Also removes any whitespace in the returned word and in the changed content. */
+std::string_view extract_word(std::string_view &content) {
+	if (content.size() >= 2 && content[0] == '\r' && content[1] == '\n')
+		return {};
+	auto start_word = content.find_first_not_of(' ');
+	if (start_word == std::string_view::npos) start_word = 0;
+	auto end_word = content.find_first_of(" \r\n", start_word);
+	auto ret = content.substr(start_word, end_word - start_word);
+	auto s = content.find_first_not_of(' ', std::min(end_word, content.size() - 1));
+	if (s == std::string_view::npos)
+		content = {};
+	else
+		content = content.substr(s);
+	return ret;
+}
+/** @brief Extract until newline */
+std::string_view extract_until_newline(std::string_view &content) {
+	if (content.size() >= 2 && content[0] == '\r' && content[1] == '\n')
+		return {};
+	auto start_word = content.find_first_not_of(' ');
+	if (start_word == std::string_view::npos) start_word = 0;
+	auto end_word = content.find_first_of("\r\n", start_word);
+	auto ret = content.substr(start_word, end_word - start_word);
+	auto s = end_word;
+	if (s == std::string_view::npos)
+		content = {};
+	else
+		content = content.substr(s);
+	return ret;
+}
+/** @brief Extract a newline including carriage return.
+ *  @return bool with false if no newline sequence was found at the beginning of content,
+ *  in which case content was not modified*/
+bool extract_newline(std::string_view &content) {
+	if (content.size() < 2)
+		return false;
+	if (content[0] != '\r' || content[1] != '\n')
+		return false;
+	content = content.substr(2);
+	return true;
+}
 
 // ------------------------------------------------------------------------------
 // struct declarations
@@ -49,7 +95,7 @@ struct headers {
 /** @brief Tcp server that serves text data according to path specification.
   * The returned content can be freely configured via callbacks via callbacks 
   * @note The tcp server instantly discards any connection after the response was sent.*/
-template<int get_size, int post_size, int put_size = 0, int delete_size = 0, int max_path_length = 256, int max_headers = 32, int buf_size = 2048, int message_buffers = 2>
+template<int get_size, int post_size, int put_size = 0, int delete_size = 0, int max_path_length = 256, int max_headers = 32, int buf_size = 4096, int message_buffers = 2>
 struct tcp_server {
 	/**
 	 * @brief Struct with a full http frame for both sending and recieving.
@@ -130,49 +176,6 @@ struct tcp_server {
 
 /** @brief Contains all implementations regarding tcp server connections */
 namespace tcp_server_internal {
-
-/** @brief Extract a word from the beginning of content, never reading over newlines.
- * Also removes any whitespace in the returned word and in the changed content. */
-std::string_view extract_word(std::string_view &content) {
-	if (content.size() >= 2 && content[0] == '\r' && content[1] == '\n')
-		return {};
-	auto start_word = content.find_first_not_of(' ');
-	if (start_word == std::string_view::npos) start_word = 0;
-	auto end_word = content.find_first_of(" \r\n", start_word);
-	auto ret = content.substr(start_word, end_word - start_word);
-	auto s = content.find_first_not_of(' ', std::min(end_word, content.size() - 1));
-	if (s == std::string_view::npos)
-		content = {};
-	else
-		content = content.substr(s);
-	return ret;
-}
-/** @brief Extract until newline */
-std::string_view extract_until_newline(std::string_view &content) {
-	if (content.size() >= 2 && content[0] == '\r' && content[1] == '\n')
-		return {};
-	auto start_word = content.find_first_not_of(' ');
-	if (start_word == std::string_view::npos) start_word = 0;
-	auto end_word = content.find_first_of("\r\n", start_word);
-	auto ret = content.substr(start_word, end_word - start_word);
-	auto s = end_word;
-	if (s == std::string_view::npos)
-		content = {};
-	else
-		content = content.substr(s);
-	return ret;
-}
-/** @brief Extract a newline including carriage return.
- *  @return bool with false if no newline sequence was found at the beginning of content,
- *  in which case content was not modified*/
-bool extract_newline(std::string_view &content) {
-	if (content.size() < 2)
-		return false;
-	if (content[0] != '\r' || content[1] != '\n')
-		return false;
-	content = content.substr(2);
-	return true;
-}
 
 template template_args
 constexpr static err_t tcp_server_result(void *arg, int status) {
@@ -290,25 +293,26 @@ template template_args
 void tcp_server template_args_pure::message_buffer::req_update_structured_views() {
 	// request line
 	std::string_view buffer_view{buffer.view};
-	method = tcp_server_internal::extract_word(buffer_view);
-	path = tcp_server_internal::extract_word(buffer_view);
-	http_version = tcp_server_internal::extract_word(buffer_view);
-	if (!tcp_server_internal::extract_newline(buffer_view))
+	method = extract_word(buffer_view);
+	path = extract_word(buffer_view);
+	http_version = extract_word(buffer_view);
+	if (!extract_newline(buffer_view))
 		LogWarning("req_update_structured_views() did not find newline sequence after the request line");
 	// headers
-	for (std::string_view key = tcp_server_internal::extract_word(buffer_view), value = tcp_server_internal::extract_until_newline(buffer_view);
-		!key.empty(); key = tcp_server_internal::extract_word(buffer_view), value = tcp_server_internal::extract_until_newline(buffer_view)) {
+	for (std::string_view key = extract_word(buffer_view), value = extract_until_newline(buffer_view);
+		!key.empty(); key = extract_word(buffer_view), value = extract_until_newline(buffer_view)) {
 
 		key.remove_suffix(key.empty() ? 0: 1);
 		if (!headers_view.headers.push(header{key, value}))
 			LogWarning("req_update_structured_views() Failed to add the following header:");
 
-		if (!tcp_server_internal::extract_newline(buffer_view))
-			LogWarning("req_update_structured_views() did not find newline sequence after header");
+		// last header does not necessarily need a newline after it
+		if (!extract_newline(buffer_view))
+			LogInfo("req_update_structured_views() did not find newline sequence after header");
 	}
-	// body (is simply the rest without the first newline)
-	if (!tcp_server_internal::extract_newline(buffer_view))
-		LogWarning("req_update_structured_views() did not find a newline for body info");
+	// body (is simply the rest without the first newline, can be null so only logging missing newline on info level)
+	if (!extract_newline(buffer_view))
+		LogInfo("req_update_structured_views() did not find a newline for body info");
 	body = buffer_view;
 }
 

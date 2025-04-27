@@ -13,6 +13,13 @@ struct wifi_storage{
 		static wifi_storage storage{};
 		return storage;
 	}
+	bool wifi_changed{false};
+	bool wifi_connected{false};
+	static_string<64> ssid_wifi{WIFI_SSID};
+	static_string<64> pwd_wifi{WIFI_PASSWORD};
+	bool hostname_changed{false};
+	static_string<64> hostname{"DcDcConverter"};
+	static_string<64> mdns_service_name{"lachei_tcp_server"};
 
 	static int scan_result(void *, const cyw43_ev_scan_result_t *result) {
 		if (!result)

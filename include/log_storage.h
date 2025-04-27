@@ -105,8 +105,8 @@ inline void LogFatal(std::format_string<Args...> fmt, Args&&... args) {
 // ---------------------------------------------------------------------------------------
 // Static string logging
 // ---------------------------------------------------------------------------------------
-void LogInfo(std::string_view message) { log_storage::Default().push(log_severity::Info, message); std::println("[Info   ]: {}", message);}
-void LogWarning(std::string_view message) { log_storage::Default().push(log_severity::Warning, message); std::println("[Warning]: {}", message);}
-void LogError(std::string_view message) { log_storage::Default().push(log_severity::Error, message); std::println("[Error  ]: {}", message);}
-void LogFatal(std::string_view message) { log_storage::Default().push(log_severity::Fatal, message); std::println("[Fatal  ]: {}", message);}
+void LogInfo(std::string_view message) { if (log_storage::Default().push(log_severity::Info, message)) std::println("[Info   ]: {}", message);}
+void LogWarning(std::string_view message) { if (log_storage::Default().push(log_severity::Warning, message)) std::println("[Warning]: {}", message);}
+void LogError(std::string_view message) { if (log_storage::Default().push(log_severity::Error, message)) std::println("[Error  ]: {}", message);}
+void LogFatal(std::string_view message) { if (log_storage::Default().push(log_severity::Fatal, message)) std::println("[Fatal  ]: {}", message);}
 

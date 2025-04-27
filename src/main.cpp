@@ -28,51 +28,44 @@ static void mdns_response_callback(struct mdns_service *service, void*)
 }
 
 void main_task(void *) {
-    LogInfo("Running task main");
+    LogInfo("Communication task");
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-
-    const char hostname[]{"DcDcConverter"};
-    netif_set_hostname(&cyw43_state.netif[CYW43_ITF_STA], hostname);
-
-    access_point ap{.name = "auf_gehts", .password="passwort"};
-    ap.init();
-
-    if (true) {
-        LogInfo("Connecting to WiFi...");
-        int on = 1;
-        while (0 != cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 3000)) {
-            LogWarning("failed to connect.");
-            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, on);
-            on ^= 1;
-        } 
-        LogInfo("Connected.");
-    }
-    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
-
-    mdns_resp_init();
-    mdns_resp_add_netif(&cyw43_state.netif[CYW43_ITF_STA], hostname);
-    mdns_resp_add_service(&cyw43_state.netif[CYW43_ITF_STA], "lachei_tcp_server", "_http", DNSSD_PROTO_TCP, 80, mdns_response_callback, NULL);
-
-    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-
-    Webserver().start();
-
-    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
-
-    LogInfo(std::string("Ready, running http at ") + ip4addr_ntoa(netif_ip4_addr(netif_list)));
 
     while(true) {
         vTaskDelay(500);
     }
 
-    mdns_resp_remove_netif(&cyw43_state.netif[CYW43_ITF_STA]);
-
-    cyw43_arch_deinit();
 }
 
 void wifi_search_task(void *) {
-    LogInfo("Running task search");
+    LogInfo("Wifi task started");
+    if (wifi_storage::Default().ssid_wifi.empty()) // onyl start the access point by default if no normal wifi connection is set
+        access_point::Default().init();
+
+    netif_set_hostname(&cyw43_state.netif[CYW43_ITF_STA], wifi_storage::Default().hostname.data());
+    mdns_resp_init();
+    mdns_resp_add_netif(&cyw43_state.netif[CYW43_ITF_STA], wifi_storage::Default().hostname.data());
+    mdns_resp_add_service(&cyw43_state.netif[CYW43_ITF_STA], wifi_storage::Default().mdns_service_name.data(), "_http", DNSSD_PROTO_TCP, 80, mdns_response_callback, NULL);
+
     for (;;) {
+        // connect to wifi
+        if (wifi_storage::Default().ssid_wifi.view.size() && (CYW43_LINK_JOIN != cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) || wifi_storage::Default().wifi_changed)) {
+            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
+            LogInfo("Trying to connect to wifi");
+            if (0 != cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 1000))
+                LogWarning("failed to connect, retry in 5 seconds");
+            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+            wifi_storage::Default().wifi_changed = false;
+        } else {
+            wifi_storage::Default().wifi_connected = true;
+        }
+        // rename the hostnaem
+        if (wifi_storage::Default().hostname_changed) {
+            LogInfo("Hostname change detected, adopting hostname");
+            netif_set_hostname(&cyw43_state.netif[CYW43_ITF_STA], wifi_storage::Default().hostname.data());
+            mdns_resp_rename_netif(&cyw43_state.netif[CYW43_ITF_STA], wifi_storage::Default().hostname.data());
+            wifi_storage::Default().hostname_changed = false;
+        }
         LogInfo("Trying to update wifi scan");
         wifi_storage::Default().update_scanned();
         vTaskDelay(5000);
@@ -94,6 +87,8 @@ void startup_task(void *) {
         }
     }
     cyw43_arch_enable_sta_mode();
+    Webserver().start();
+    LogInfo("Ready, running http at {}", ip4addr_ntoa(netif_ip4_addr(netif_list)));
     LogInfo("Initialization done");
     TaskHandle_t task;
     TaskHandle_t task_update_wifi;

@@ -43,9 +43,10 @@ struct static_string {
 		view = std::string_view{storage.data(), view.size() + info.size};
 		return info.size;
 	}
-	constexpr  char* data() { return storage.data(); }
-	constexpr  void clear() { view = {}; }
-	constexpr  bool empty() { return view.empty(); }
+	constexpr char* data() { return storage.data(); }
+	constexpr void clear() { view = {}; }
+	constexpr bool empty() { return view.empty(); }
+	constexpr void make_c_str_safe() { if (view.size() < storage.size()) storage[view.size()] = '\0'; }
 };
 
 template<typename T, int N>
