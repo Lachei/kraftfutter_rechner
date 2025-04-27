@@ -1,30 +1,25 @@
-<html>
-<head><meta charset="ISO-8859-1"> 
- <title>DcDc Umspanner</title>
- <style>
-  .t{display:inline-grid;text-align:center;padding:1em 0;cursor:pointer;border:1px solid grey;border-top:0px;border-bottom:0px}
-  .t:hover{background-color:green;transition: background-color 500ms linear;border-top:0px;border-bottom:0px}
-  .tp{display:inline-grid;padding:1em 0;border:none;width:100%;}
- </style>
-</head>
+<!DOCTYPE html>
+<html style="height:100%">
+<head><meta charset="utf-8"><title>DcDc Umspanner</title><link rel="stylesheet" href="style"></head>
 <body>
  <h1 style="text-align:center">DcDc Umspanner</h1>
- <div style="display:grid;grid-template-columns:repeat(3, auto);background-color:#d9ffd9;">
+ <div style="display:grid;grid-template-columns:repeat(3, auto);background-color:#d9ffd9;border-radius:20px;">
   <div class="t u">Übersicht</div>
   <div class="t e">Einstellungen</div>
   <div class="t i">Internet</div>
  </div>
- <div id="v" style="width:100%;margin-top:4px;padding:1px;overflow:hidden;">
-  <div style="display:grid;grid-template-columns:repeat(3, 100%);grid-gad:4px">
+ <div id="v">
+  <div style="display:grid;grid-template-columns:repeat(3, 100%);grid-gad:4px;height:100%;">
    <iframe id="u" class="tp" src="overview"></iframe>
    <iframe id="e" class="tp" src="settings"></iframe>
    <iframe id="i" class="tp" src="internet"></iframe>
   </div>
  </div>
  <script>
+  var p="Übersicht";
   const d=document;
   const v=d.getElementById('v');
-  for(let a of d.getElementsByClassName("t")){a.onclick=()=>{let x=d.getElementById(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"})};};
+  for(let a of d.getElementsByClassName("t")){a.onclick=()=>{let x=d.getElementById(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"}); p=a.innerHTML;};};
  </script>
 </body>
 </html>

@@ -14,38 +14,38 @@ struct static_string {
 		std::copy_n(d.begin(), s, storage.begin());
 		view = std::string_view{storage.data(), s};
 	}
-	void set_size(int s) { view = std::string_view{storage.begin(), storage.begin() + s}; }
-	void fill(std::string_view d) { 
+	constexpr void set_size(int s) { view = std::string_view{storage.begin(), storage.begin() + s}; }
+	constexpr void fill(std::string_view d) { 
 		size_t s = std::min(d.size(), storage.size());
 		std::copy_n(d.begin(), s, storage.begin());
 		view = std::string_view{storage.data(), s}; 
 	}
-	void append(std::string_view d) { 
+	constexpr void append(std::string_view d) { 
 		size_t s = std::min<size_t>(d.size(), storage.size() - view.size());
 		std::copy_n(d.begin(), s, storage.data() + view.size());
 		view = std::string_view{storage.data(), view.size() + s}; 
 	}
-	void append(char c) {
+	constexpr void append(char c) {
 		if (view.size() == storage.size())
 			return;
 		storage[view.size()] = c;
 		view = std::string_view{storage.data(), view.size() + 1};
 	}
 	template<typename... Args>
-	int fill_formatted(std::format_string<Args...> fmt, Args&&... args) { 
+	constexpr int fill_formatted(std::format_string<Args...> fmt, Args&&... args) { 
 		auto info = std::format_to_n(storage.data(), storage.size(), fmt, std::forward<Args>(args)...); 
 		view = std::string_view{storage.data(), static_cast<size_t>(info.size)};
 		return info.size;
 	}
 	template<typename... Args>
-	int append_formatted(std::format_string<Args...> fmt, Args&&... args) { 
+	constexpr int append_formatted(std::format_string<Args...> fmt, Args&&... args) { 
 		auto info = std::format_to_n(storage.data() + view.size(), storage.size() - view.size(), fmt, std::forward<Args>(args)...); 
 		view = std::string_view{storage.data(), view.size() + info.size};
 		return info.size;
 	}
-	char* data() { return storage.data(); }
-	void clear() { view = {}; }
-	bool empty() { return view.empty(); }
+	constexpr  char* data() { return storage.data(); }
+	constexpr  void clear() { view = {}; }
+	constexpr  bool empty() { return view.empty(); }
 };
 
 template<typename T, int N>

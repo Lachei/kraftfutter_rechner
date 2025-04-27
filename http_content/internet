@@ -1,10 +1,27 @@
+<!DOCTYPE html>
 <html>
+<head><meta charset="utf-8"><link rel="stylesheet" href="style">
 <body>
-<h2>Internet Einstellungen</h2>
-<div>
+<h3>Internet Einstellungen</h3>
+<h4>Wifi einstellungen:</h4>
+<div id="i">
 </div>
 </body>
 <script>
-
+const el='<details id="__ssid__" style="margin:10px;box-shadow:0 0 20px black"><summary>__ssid__<span style="background:green;margin-left:10px;padding:.1em;display:none">Verbunden</span></summary> <table style="width:100%"><tr> <td><input id="pw" type="password"><label for="pw">Passwort</label></td> <td><div class="__rssi__" style="margin-top:30px;"><div class="wv4 w"><div class="wv3 w"><div class="wv2 w"><div class="wv1 w"></div></div></div></div></div></td><td><button>Verbinden</button></td></table></tr></details>';
+const d=document;
+const i=d.getElementById("i");
+const mr=(rs)=>{if(rs<-80)return"ws1";if(rs<-60)return"ws2";if(rs<-40)return"ws3";return"ws4"};
+setInterval(async ()=>{
+if(parent.p!="Internet")
+  return;
+let w=await fetch("discovered_wifis");
+w=await w.json();
+for(let e of w){
+ let s=d.getElementById(e.ssid);
+ if(s)s.children[1].firstChild.firstChild.children[1].firstChild.className=mr(e.rssi);
+ else i.innerHTML+=el.replaceAll("__ssid__",e.ssid).replaceAll("__rssi__",mr(e.rrsi));
+}
+}, 1000);
 </script>
 </html>
