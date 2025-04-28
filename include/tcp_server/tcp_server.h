@@ -157,17 +157,16 @@ struct tcp_server {
 	err_t stop();
 	
 	struct tcp_pcb *server_pcb{};
-	struct tcp_pcb *client_pcb{};
-	bool complete{};
 	bool closed{};
+	std::array<std::atomic<struct tcp_pcb*>, message_buffers> client_pcbs{}; // each client has 1 send and recieve buffer for itself
 	std::array<message_buffer, message_buffers> send_buffers{};
 	std::array<message_buffer, message_buffers> recieve_buffers{};
 	int sent_len{};
 	int recv_len{};
 	int run_count{};
 
-	void process_request(uint32_t recieve_buffer_idx);
-	err_t send_data(uint32_t send_buffer_idx);
+	void process_request(uint32_t recieve_buffer_idx, struct tcp_pcb *client);
+	err_t send_data(uint32_t send_buffer_idx, struct tcp_pcb *client);
 };
 
 // ------------------------------------------------------------------------------
@@ -177,29 +176,37 @@ struct tcp_server {
 /** @brief Contains all implementations regarding tcp server connections */
 namespace tcp_server_internal {
 
+constexpr static err_t clear_client_pcb(std::atomic<struct tcp_pcb*> &pcb) {
+	err_t err{ERR_OK};
+	tcp_arg(pcb, NULL);
+	tcp_poll(pcb, NULL, 0);
+	tcp_sent(pcb, NULL);
+	tcp_recv(pcb, NULL);
+	tcp_err(pcb, NULL);
+	err = tcp_close(pcb);
+	if (err != ERR_OK) {
+		LogError("close failed calling abort: {}", err);
+		tcp_abort(pcb);
+		err = ERR_ABRT;
+	}
+	pcb = nullptr;
+	return err;
+
+}
+
 template template_args
-constexpr static err_t tcp_server_result(void *arg, int status) {
+constexpr static err_t tcp_server_result(void *arg, int status, struct tcp_pcb *client) {
 	tcp_server template_args_pure& server = reinterpret_cast<tcp_server template_args_pure&>(*(char*)arg);
 	if (status == 0) {
 		LogInfo("Server success");
 		return ERR_OK;
 	}
-	LogWarning("Server failed {}", status);
-	server.complete = true;
+	LogWarning("Server failed {}, deinitializing {}", status, client ? "one client": "no client");
 	err_t err = ERR_OK;
-	if (server.client_pcb != NULL) {
-		tcp_arg(server.client_pcb, NULL);
-		tcp_poll(server.client_pcb, NULL, 0);
-		tcp_sent(server.client_pcb, NULL);
-		tcp_recv(server.client_pcb, NULL);
-		tcp_err(server.client_pcb, NULL);
-		err = tcp_close(server.client_pcb);
-		if (err != ERR_OK) {
-			LogError("close failed calling abort: {}", err);
-			tcp_abort(server.client_pcb);
-			err = ERR_ABRT;
-		}
-		server.client_pcb = NULL;
+	for (auto &pcb: server.client_pcbs) {
+		if (pcb == nullptr || (client && pcb != client))
+			continue;
+		err = clear_client_pcb(pcb);
 	}
 	return err;
 }
@@ -214,7 +221,7 @@ template template_args
 constexpr static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
 	if (!p || !arg) {
 		LogError("tcp_server_recv() failed");
-		return tcp_server_result template_args_pure(arg, -1);
+		return tcp_server_result template_args_pure(arg, -1, tpcb);
 	}
 	LogInfo("Message recieved");
 	tcp_server template_args_pure& server = reinterpret_cast<tcp_server template_args_pure&>(*(char*)arg);
@@ -229,7 +236,7 @@ constexpr static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct p
 			if (buffer.used.exchange(true))
 				continue;
 			buffer.buffer.set_size(pbuf_copy_partial(p, buffer.buffer.data(), p->tot_len, 0));
-			server.process_request(recieve_buffer);
+			server.process_request(recieve_buffer, tpcb);
 			recieve_success = true;
 			break;
 		}
@@ -242,15 +249,17 @@ constexpr static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct p
 
 template template_args
 constexpr static err_t tcp_server_poll(void *arg, struct tcp_pcb *tpcb) {
+	// remove connections that are not anymore valid
 	LogInfo("tcp_server_poll_fn");
-	return ERR_OK;
+	return tcp_server_result template_args_pure(arg, -1, tpcb); // on no response remove the client to free up space
 }
 
 template template_args
 constexpr static void tcp_server_err(void *arg, err_t err) {
+	LogError("tcp_server_err {}", err);
 	if (err != ERR_ABRT) {
-		LogInfo("tcp_client_err_fn {}", err);
-		tcp_server_result template_args_pure(arg, err);
+		LogError("tcp_client_err_fn {}", err);
+		tcp_server_result template_args_pure(arg, err, nullptr);
 	}
 }
 
@@ -258,24 +267,36 @@ template template_args
 constexpr static err_t tcp_server_accept (void *arg, struct tcp_pcb *client_pcb, err_t err) {
 	if (err != ERR_OK || client_pcb == NULL || arg == NULL) {
 		LogError("Failure in accept");
-		tcp_server_result template_args_pure(arg, err);
+		tcp_server_result template_args_pure(arg, err, nullptr);
 		return ERR_VAL;
 	}
 
 	tcp_server template_args_pure& server = reinterpret_cast<tcp_server template_args_pure&>(*(char*)arg);
 	
-	LogInfo("Client connected, setting up callbacks");
+	// search for empty slot and assing it a new value
+	bool found_empty_spot{};
+	int i{};
+	for (auto &pcb: server.client_pcbs) {
+		++i;
+		struct tcp_pcb *null{}; // should be nullptr
+		found_empty_spot |= pcb.compare_exchange_strong(null, client_pcb);
+		if (found_empty_spot)
+			break;
+	}
 
-	if (server.client_pcb) {
-		err = tcp_close(server.client_pcb);
+	if (!found_empty_spot) {
+		LogError("All clients already connected, refusing");
+		err = tcp_close(client_pcb);
 		if (err != ERR_OK) {
 			LogError("close failed calling abort: {}", err);
-			tcp_abort(server.client_pcb);
+			tcp_abort(client_pcb);
 			err = ERR_ABRT;
 		}
+		return err;
 	}
+
+	LogInfo("Client connected on id {}, setting up callbacks", i);
 	
-	server.client_pcb = client_pcb;
 	tcp_arg(client_pcb, arg);
 	tcp_sent(client_pcb, tcp_server_sent template_args_pure);
 	tcp_recv(client_pcb, tcp_server_recv template_args_pure);
@@ -382,7 +403,7 @@ err_t tcp_server template_args_pure::start() {
 		return ERR_ABRT;
 	}
 	
-	server_pcb = tcp_listen(pcb);
+	server_pcb = tcp_listen_with_backlog(pcb, message_buffers);
 	if (!server_pcb) {
 		LogError("failed to listen");
 		if (pcb) {
@@ -402,19 +423,10 @@ err_t tcp_server template_args_pure::start() {
 template template_args
 err_t tcp_server template_args_pure::stop() {
 	err_t err = ERR_OK;
-	if (client_pcb != NULL) {
-		tcp_arg(client_pcb, NULL);
-		tcp_poll(client_pcb, NULL, 0);
-		tcp_sent(client_pcb, NULL);
-		tcp_recv(client_pcb, NULL);
-		tcp_err(client_pcb, NULL);
-		err = tcp_close(client_pcb);
-		if (err != ERR_OK) {
-			LogError("close failed calling abort: {}", err);
-			tcp_abort(client_pcb);
-			err = ERR_ABRT;
-		}
-		client_pcb = NULL;
+	for (auto &client_pcb: client_pcbs) {
+		if (client_pcb = nullptr) 
+			continue;
+		clear_client_pcb(client_pcb);
 	}
 	if (server_pcb) {
 		tcp_arg(server_pcb, NULL);
@@ -427,7 +439,7 @@ err_t tcp_server template_args_pure::stop() {
 
 
 template template_args
-void tcp_server template_args_pure::process_request(uint32_t recieve_buffer_idx) {
+void tcp_server template_args_pure::process_request(uint32_t recieve_buffer_idx, struct tcp_pcb *client) {
 	if (recieve_buffer_idx >= recieve_buffers.size()) {
 		LogError("Impossible recieve buffer idx");
 		return;
@@ -469,23 +481,23 @@ void tcp_server template_args_pure::process_request(uint32_t recieve_buffer_idx)
 	else
 		default_endpoint_cb(recieve_buffer, send_buffer);
 
-	send_data(free_send_idx);
+	send_data(free_send_idx, client);
 	recieve_buffer.clear();
 	send_buffer.clear();
 }
 
 template template_args
-err_t tcp_server template_args_pure::send_data(uint32_t send_buffer_index) {
+err_t tcp_server template_args_pure::send_data(uint32_t send_buffer_index, struct tcp_pcb *client) {
 	auto &buffer = send_buffers[send_buffer_index].buffer;
-	err_t err = tcp_write(client_pcb, buffer.view.data(), buffer.view.size(), 0);
+	err_t err = tcp_write(client, buffer.view.data(), buffer.view.size(), 0);
 	if (err != ERR_OK) {
 		LogError("Failed to write data {}", err);
-		return tcp_server_internal::tcp_server_result template_args_pure(this, -1);
+		return tcp_server_internal::tcp_server_result template_args_pure(this, -1, client);
 	}
-	err = tcp_output(client_pcb);
+	err = tcp_output(client);
 	if (err != ERR_OK) {
 		LogError("Failed to output data {}", err);
-		return tcp_server_internal::tcp_server_result template_args_pure(this, -1);
+		return tcp_server_internal::tcp_server_result template_args_pure(this, -1, client);
 	}
 	return ERR_OK;
 }

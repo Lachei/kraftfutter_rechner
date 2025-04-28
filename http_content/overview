@@ -13,12 +13,11 @@
  var l=d.getElementById("l");
  var ll=d.getElementById("ll");
  setInterval(async ()=>{
-  if(parent.p!="Übersicht")
-   return;
+  if(parent.p!="u"||!parent.lo)return;
   let logs=await fetch("logs", {signal: AbortSignal.timeout(500)});
   let t=await logs.text();
   l.innerHTML=t.replace(/(?:\r\n|\r|\n)/g, '<br>');
- },1000);
+ },4000);
  const sl=async()=>{await fetch("set_log_level",{method:"POST",body:ll.options[ll.selectedIndex].text});};
  </script>
 </html>

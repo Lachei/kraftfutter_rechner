@@ -10,16 +10,19 @@
  </div>
  <div id="v">
   <div style="display:grid;grid-template-columns:repeat(3, 100%);grid-gap:10px;height:100%;">
-   <iframe id="u" class="tp" src="overview"></iframe>
-   <iframe id="e" class="tp" src="settings"></iframe>
-   <iframe id="i" class="tp" src="internet"></iframe>
-  </div>
+   <iframe id="u" class="tp" src="overview" onload="d.getElementById('e').loading='eager';"></iframe>
+   <iframe id="e" class="tp" loading="lazy" src="settings" onload="d.getElementById('i').loading='eager';"></iframe>
+   <iframe id="i" class="tp" loading="lazy" src="internet" onload="lo=true;console.log('here we are')"></iframe>
+  </div
  </div>
  <script>
-  var p="Übersicht";
+  var p="u";
+  var lo=false;
   const d=document;
   const v=d.getElementById('v');
-  for(let a of d.getElementsByClassName("t")){a.onclick=()=>{let x=d.getElementById(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"}); p=a.innerHTML;};};
+  for(let a of d.getElementsByClassName("t")){a.onclick=()=>{let x=d.getElementById(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"}); p=a.classList[1];};};
+  window.onresize=()=>{let x=d.getElementById(p).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x});}
+
  </script>
 </body>
 </html>

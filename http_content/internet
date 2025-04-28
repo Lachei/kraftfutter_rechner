@@ -19,7 +19,7 @@ const h=d.getElementById("h");
 const hi=d.getElementById("hi");
 const mr=(rs)=>{if(rs<-80)return"ws1";if(rs<-60)return"ws2";if(rs<-40)return"ws3";return"ws4"};
 setInterval(async ()=>{
-if(parent.p!="Internet")return;
+if(parent.p!="i"||!parent.lo)return;
 let w=await (await fetch("discovered_wifis")).json();
 for(let e of w){if(!d.getElementById(e.ssid))i.innerHTML+=el.replaceAll("__ssid__",e.ssid).replaceAll("__rssi__",mr(e.rrsi));
  s=d.getElementById(e.ssid);
@@ -30,7 +30,7 @@ w=await (await fetch("ap_active")).text();
 ap.checked=w==="true";
 w=await (await fetch("host_name")).text();
 h.innerHTML=w;
-}, 1000);
+}, 4000);
 const uap=async()=>{await fetch("ap_active",{method:"POST",body:String(ap.checked)})};
 const uh=async()=>{await fetch("host_name",{method:"POST",body:hi.value})};
 const co=async(id)=>{await fetch("wifi_connect",{method:"POST",body:id+" "+d.getElementById(id+"pw").value});}
