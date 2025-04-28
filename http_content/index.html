@@ -10,19 +10,23 @@
  </div>
  <div id="v">
   <div style="display:grid;grid-template-columns:repeat(3, 100%);grid-gap:10px;height:100%;">
-   <iframe id="u" class="tp" src="overview" onload="d.getElementById('e').loading='eager';"></iframe>
+   <iframe id="u" class="tp" src="overview" onload="document.getElementById('e').loading='eager';"></iframe>
    <iframe id="e" class="tp" loading="lazy" src="settings" onload="d.getElementById('i').loading='eager';"></iframe>
-   <iframe id="i" class="tp" loading="lazy" src="internet" onload="lo=true;console.log('here we are')"></iframe>
+   <iframe id="i" class="tp" loading="lazy" src="internet" onload="ol();"></iframe>
   </div
  </div>
  <script>
   var p="u";
-  var lo=false;
+  var lo=0;
   const d=document;
   const v=d.getElementById('v');
   for(let a of d.getElementsByClassName("t")){a.onclick=()=>{let x=d.getElementById(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"}); p=a.classList[1];};};
+  const ol=()=>{console.log("TODO:remove but here we are");
+   let c = d.styleSheets[0].cssRules;
+   let ct = '';[...c].forEach(r=>ct+=r.cssText);
+   for (f of d.getElementsByClassName("tp"))f.contentDocument.head.innerHTML+="<style>"+ct+"</style>";
+   lo=1;};
   window.onresize=()=>{let x=d.getElementById(p).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x});}
-
  </script>
 </body>
 </html>

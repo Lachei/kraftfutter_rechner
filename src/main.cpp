@@ -17,6 +17,7 @@
 #include "access_point.h"
 #include "wifi_search.h"
 #include "webserver.h"
+#include "usb_interface.h"
 
 #define TEST_TASK_PRIORITY ( tskIDLE_PRIORITY + 1UL )
 
@@ -27,12 +28,11 @@ static void mdns_response_callback(struct mdns_service *service, void*)
     LogError("mdns add service txt failed");
 }
 
-void main_task(void *) {
-    LogInfo("Communication task");
-    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+void usb_comm_task(void *) {
+    LogInfo("Usb communication task");
 
-    while(true) {
-        vTaskDelay(500);
+    for (;;) {
+	handle_usb_command();
     }
 
 }
@@ -90,9 +90,10 @@ void startup_task(void *) {
     Webserver().start();
     LogInfo("Ready, running http at {}", ip4addr_ntoa(netif_ip4_addr(netif_list)));
     LogInfo("Initialization done");
-    TaskHandle_t task;
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+    TaskHandle_t task_usb_comm;
     TaskHandle_t task_update_wifi;
-    xTaskCreate(main_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 1, &task);
+    xTaskCreate(usb_comm_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 1, &task_usb_comm);	// usb task also has to be started only after cyw43 init as some wifi functions are available
     xTaskCreate(wifi_search_task, "UpdateWifiThread", configMINIMAL_STACK_SIZE, NULL, 1, &task_update_wifi);
     for (;;) vTaskDelay(1<<20);
 }

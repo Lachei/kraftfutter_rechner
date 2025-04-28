@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include "log_storage.h"
 #include "static_types.h"
 
@@ -32,8 +34,7 @@ struct wifi_storage{
 				wifi.rssi = (.8 * wifi.rssi) + (.2 * result->rssi);
 				return 0;
 			}
-		}
-		auto* wifi = wifi_storage::Default().wifis.push();
+		} auto* wifi = wifi_storage::Default().wifis.push();
 		if (!wifi) {
 			LogError("Wifi storage overflow");
 			return 0;
@@ -60,6 +61,13 @@ struct wifi_storage{
 	}
 };
 
-
+std::ostream& operator<<(std::ostream &os, const wifi_storage &w) {
+	os << "Wifi connected: " << (w.wifi_connected ? "true": "false") << '\n';
+	os << "Stored wifi ssid: " << w.ssid_wifi << '\n';
+	os << "ap_active: ?" << w.ssid_wifi << '\n';
+	os << "hostname: " << w.hostname << '\n';
+	os << "mdns_service_name: " << w.mdns_service_name << '\n';
+	os << "Amount of discovered wifis: " << w.wifis.size() << '\n';
+}
 
 
