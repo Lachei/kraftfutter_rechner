@@ -18,6 +18,7 @@
 #include "wifi_search.h"
 #include "webserver.h"
 #include "usb_interface.h"
+#include "settings.h"
 
 #define TEST_TASK_PRIORITY ( tskIDLE_PRIORITY + 1UL )
 
@@ -35,7 +36,7 @@ void usb_comm_task(void *) {
 	handle_usb_command();
     }
 
-}
+f
 
 void wifi_search_task(void *) {
     LogInfo("Wifi task started");

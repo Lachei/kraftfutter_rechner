@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "settings.h"
+
 // handle exactly one command from the input stream at a time (should be called in an endless loop)
 static constexpr inline void handle_usb_command(std::istream &in = std::cin, std::ostream &out = std::cout) {
 	std::string command;
