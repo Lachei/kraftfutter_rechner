@@ -12,7 +12,6 @@
  var d=document;
  var l=d.getElementById("l");
  var ll=d.getElementById("ll");
- const int_fun
  setInterval(async ()=>{
   if(parent.p!="u"||!parent.lo)return;
   let logs=await fetch("logs", {signal: AbortSignal.timeout(500)});

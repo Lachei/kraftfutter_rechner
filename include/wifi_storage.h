@@ -6,9 +6,12 @@
 #include "static_types.h"
 
 struct wifi_storage{
+	static constexpr uint32_t DISCOVER_TIMEOUT_US = 1e7; // 10 seconds
+
 	struct wifi_info {
 		static_string<256> ssid{};
 		int rssi{};
+		uint64_t last_seen_us{};
 	};
 	static_vector<wifi_info, 8> wifis{};
 	static wifi_storage& Default() {
@@ -30,44 +33,44 @@ struct wifi_storage{
 		std::string_view result_ssid{reinterpret_cast<const char *>(result->ssid)};
 		for (auto &wifi: wifi_storage::Default().wifis) {
 			if (wifi.ssid.view == result_ssid) {
-				// LogInfo("Wifi already found");
 				wifi.rssi = (.8 * wifi.rssi) + (.2 * result->rssi);
+				wifi.last_seen_us = time_us_64();
 				return 0;
 			}
-		} auto* wifi = wifi_storage::Default().wifis.push();
+		} 
+
+		auto* wifi = wifi_storage::Default().wifis.push();
 		if (!wifi) {
 			LogError("Wifi storage overflow");
 			return 0;
 		}
-		
 		wifi->ssid.fill(result_ssid);
 		wifi->rssi = result->rssi;
+		wifi->last_seen_us = time_us_64();
 		return 0;
 	}
 	
 	void update_scanned() {
-		wifis.clear();
+		// scan new wifis
 		cyw43_wifi_scan_options_t scan_options = {0};
-		int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result);
-		if (0 != err) {
-			LogError("Failed wifi scan: {}", err);
+		if (0 != cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result)) {
+			LogError("Failed wifi scan");
 			return;
 		}
 
-		if (cyw43_wifi_scan_active(&cyw43_state)) {
-			cyw43_arch_poll();
-			vTaskDelay(1000);
-		}
+		// remove old wifis
+		uint64_t cur_us = time_us_64();
+		wifis.remove_if([cur_us](const auto &e){ return cur_us - e.last_seen_us > DISCOVER_TIMEOUT_US; });
 	}
 };
 
 std::ostream& operator<<(std::ostream &os, const wifi_storage &w) {
 	os << "Wifi connected: " << (w.wifi_connected ? "true": "false") << '\n';
-	os << "Stored wifi ssid: " << w.ssid_wifi << '\n';
-	os << "ap_active: ?" << w.ssid_wifi << '\n';
-	os << "hostname: " << w.hostname << '\n';
-	os << "mdns_service_name: " << w.mdns_service_name << '\n';
+	os << "Stored wifi ssid: " << w.ssid_wifi.view << '\n';
+	os << "hostname: " << w.hostname.view << '\n';
+	os << "mdns_service_name: " << w.mdns_service_name.view << '\n';
 	os << "Amount of discovered wifis: " << w.wifis.size() << '\n';
+	return os;
 }
 
 

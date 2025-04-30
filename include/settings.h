@@ -12,15 +12,15 @@ struct settings {
 		return s;
 	}
 	/** @brief writes the settings struct as json to the static strig s */
-	template<typename N>
+	template<int N>
 	constexpr void dump_to_json(static_string<N> &s) const {
-
+		s.append_formatted(R"({{"k_s":{}}})", k_s);
 	}
 };
 
-/** @brief prints formatted for monospace output */
+/** @brief prints formatted for monospace output, eg. usb */
 std::ostream& operator<<(std::ostream &os, const settings &s) {
-	os << "k_s:   :" << k_s << '\n';
+	os << "k_s:   " << s.k_s << '\n';
 	return os;
 }
 

@@ -3,7 +3,7 @@
 #include "static_types.h"
 #include "tcp_server/tcp_server.h"
 #include "dcdc-converter-html.h"
-#include "wifi_search.h"
+#include "wifi_storage.h"
 #include "access_point.h"
 
 using tcp_server_typed = tcp_server<10, 4, 0, 0>;

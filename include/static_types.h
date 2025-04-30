@@ -45,7 +45,7 @@ struct static_string {
 	}
 	constexpr char* data() { return storage.data(); }
 	constexpr void clear() { view = {}; }
-	constexpr bool empty() { return view.empty(); }
+	constexpr bool empty() const { return view.empty(); }
 	constexpr void make_c_str_safe() { if (view.size() < storage.size()) storage[view.size()] = '\0'; }
 };
 
@@ -53,14 +53,16 @@ template<typename T, int N>
 struct static_vector {
 	std::array<T, N> storage{};
 	int cur_size{};
-	T* begin() { return storage.begin(); }
-	T* end() { return storage.begin() + cur_size; }
-	T* push() { if (cur_size >= N) return {}; return storage.data() + cur_size++; }
-	bool push(const T& e) { if (cur_size == N) return false; storage[cur_size++] = e; return true; }
-	bool push(T&& e) { if (cur_size == N) return false; storage[cur_size++] = std::move(e); return true; }
-	void clear() { cur_size = 0; }
-	bool empty() { return cur_size == 0; }
-	int size() { return cur_size; }
+	constexpr T* begin() { return storage.begin(); }
+	constexpr T* end() { return storage.begin() + cur_size; }
+	constexpr T* push() { if (cur_size >= N) return {}; return storage.data() + cur_size++; }
+	constexpr bool push(const T& e) { if (cur_size == N) return false; storage[cur_size++] = e; return true; }
+	constexpr bool push(T&& e) { if (cur_size == N) return false; storage[cur_size++] = std::move(e); return true; }
+	template<typename F>
+	constexpr void remove_if(F &&f) { for (int i = cur_size - 1; i >= 0; --i) if( f(storage[i]) ) { std::swap(storage[i], storage[cur_size - 1]); --cur_size; } }
+	constexpr void clear() { cur_size = 0; }
+	constexpr bool empty() const { return cur_size == 0; }
+	constexpr int size() const { return cur_size; }
 };
 
 template<typename T, int N>
@@ -69,20 +71,20 @@ struct static_ring_buffer {
 	int cur_start{};
 	int cur_write{};
 	bool full{false};
-	auto begin() { return iterator{*this, cur_start}; }
-	auto end() { return iterator{*this, cur_write}; }
-	auto begin() const { return iterator{*this, cur_start}; }
-	auto end() const { return iterator{*this, cur_write}; }
-	T* push() {T* ret = storage.data() + cur_write; 
+	constexpr auto begin() { return iterator{*this, cur_start}; }
+	constexpr auto end() { return iterator{*this, cur_write}; }
+	constexpr auto begin() const { return iterator{*this, cur_start}; }
+	constexpr auto end() const { return iterator{*this, cur_write}; }
+	constexpr T* push() {T* ret = storage.data() + cur_write; 
 		if (cur_start == cur_write && full) cur_start = (cur_start + 1) % N; 
 		cur_write = (cur_write + 1) % N; 
 		full = cur_start == cur_write; 
 		return ret; }
-	bool push(const T& e) { *push() = e; return true; }
-	bool push(T&& e) { *push() = std::move(e); return true; }
-	void clear() { cur_start = 0; cur_write = 0; full = false; }
-	bool empty() { return cur_start == cur_write  && !full; }
-	int size() { return full? N: cur_write - cur_start + (cur_start > cur_write ? N: 0); }
+	constexpr bool push(const T& e) { *push() = e; return true; }
+	constexpr bool push(T&& e) { *push() = std::move(e); return true; }
+	constexpr void clear() { cur_start = 0; cur_write = 0; full = false; }
+	constexpr bool empty() const { return cur_start == cur_write  && !full; }
+	constexpr int size() const { return full? N: cur_write - cur_start + (cur_start > cur_write ? N: 0); }
 	template <typename SR>
 	struct iterator {
 		SR &_p;

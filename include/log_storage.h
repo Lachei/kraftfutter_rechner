@@ -11,7 +11,7 @@ enum struct log_severity {
 	Info,
 	Warning,
 	Error,
-	Fatal
+	Fatal,
 };
 
 /**
@@ -74,7 +74,7 @@ inline void LogInfo(std::format_string<Args...> fmt, Args&&... args) {
 	auto *entry = log_storage::Default().push(log_severity::Info); 
 	if (entry) {
 		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
-		std::println("[Info   ]: {}", entry->message.view);
+		//std::println("[Info   ]: {}", entry->message.view);
 	}
 }
 template<typename... Args>
@@ -82,7 +82,7 @@ inline void LogWarning(std::format_string<Args...> fmt, Args&&... args) {
 	auto *entry = log_storage::Default().push(log_severity::Warning); 
 	if (entry) {
 		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
-		std::println("[Warning]: {}", entry->message.view);
+		//std::println("[Warning]: {}", entry->message.view);
 	}
 }
 template<typename... Args>
@@ -90,7 +90,7 @@ inline void LogError(std::format_string<Args...> fmt, Args&&... args) {
 	auto *entry = log_storage::Default().push(log_severity::Error); 
 	if (entry) {
 		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
-		std::println("[Error  ]: {}", entry->message.view);
+		//std::println("[Error  ]: {}", entry->message.view);
 	}
 }
 template<typename... Args>
@@ -98,15 +98,15 @@ inline void LogFatal(std::format_string<Args...> fmt, Args&&... args) {
 	auto *entry = log_storage::Default().push(log_severity::Fatal); 
 	if (entry) {
 		entry->message.fill_formatted(fmt, std::forward<Args>(args)...);
-		std::println("[Fatal  ]: {}", entry->message.view);
+		//std::println("[Fatal  ]: {}", entry->message.view);
 	}
 }
 
 // ---------------------------------------------------------------------------------------
 // Static string logging
 // ---------------------------------------------------------------------------------------
-void LogInfo(std::string_view message) { if (log_storage::Default().push(log_severity::Info, message)) std::println("[Info   ]: {}", message);}
-void LogWarning(std::string_view message) { if (log_storage::Default().push(log_severity::Warning, message)) std::println("[Warning]: {}", message);}
-void LogError(std::string_view message) { if (log_storage::Default().push(log_severity::Error, message)) std::println("[Error  ]: {}", message);}
-void LogFatal(std::string_view message) { if (log_storage::Default().push(log_severity::Fatal, message)) std::println("[Fatal  ]: {}", message);}
+void LogInfo(std::string_view message) { log_storage::Default().push(log_severity::Info, message) /* std::println("[Info   ]: {}", message) */;}
+void LogWarning(std::string_view message) { log_storage::Default().push(log_severity::Warning, message) /* std::println("[Warning]: {}", message)*/;}
+void LogError(std::string_view message) { log_storage::Default().push(log_severity::Error, message) /* std::println("[Error  ]: {}", message)*/;}
+void LogFatal(std::string_view message) { log_storage::Default().push(log_severity::Fatal, message) /* std::println("[Fatal  ]: {}", message)*/;}
 
