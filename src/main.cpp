@@ -20,6 +20,7 @@
 #include "usb_interface.h"
 #include "settings.h"
 #include "measurements.h"
+#include "crypto_storage.h"
 
 #define TEST_TASK_PRIORITY ( tskIDLE_PRIORITY + 1UL )
 
@@ -35,6 +36,7 @@ static void mdns_response_callback(struct mdns_service *service, void*)
 
 void usb_comm_task(void *) {
     LogInfo("Usb communication task");
+    crypto_storage::Default();
 
     for (;;) {
 	handle_usb_command();
@@ -42,7 +44,6 @@ void usb_comm_task(void *) {
 }
 
 void measure_task(void *) {
-
 }
 
 void control_task(void *) {

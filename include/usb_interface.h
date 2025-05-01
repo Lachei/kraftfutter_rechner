@@ -24,11 +24,11 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		out << "      Variable1\n";
 		out << "      Variable2\n";
 		out << "      Variable3\n\n";
-		out << "  activate_wifi\n";
+		out << "  enable_wifi\n";
 		out << "    Activate wifi on the device\n\n";
 		out << "  disable_wifi\n";
 		out << "    Disable wifi on the device\n\n";
-		out << "  activate_ap\n";
+		out << "  enable_ap\n";
 		out << "    Activate the acces point on the device (also activates wifi if disabled)\n\n";
 		out << "  disable_ap\n";
 		out << "    Disable the acces point on the device (leafs the other wifi untouched)\n\n";
@@ -54,11 +54,11 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		if (!in)
 			out << "Error at setting the value\n";
 		in.clear();
-	} else if (command == "activate_wifi") {
+	} else if (command == "enable_wifi") {
 		cyw43_arch_enable_sta_mode();
 	} else if (command == "disable_wifi") {
 		cyw43_arch_disable_sta_mode();
-	} else if (command == "activate_ap") {
+	} else if (command == "enable_ap") {
 		access_point::Default().init();
 	} else if (command == "disable_ap") {
 		access_point::Default().deinit();
