@@ -4,6 +4,7 @@
 
 #include "log_storage.h"
 #include "static_types.h"
+#include "persistent_storage.h"
 
 struct wifi_storage{
 	static constexpr uint32_t DISCOVER_TIMEOUT_US = 1e7; // 10 seconds
@@ -16,6 +17,7 @@ struct wifi_storage{
 	static_vector<wifi_info, 8> wifis{};
 	static wifi_storage& Default() {
 		static wifi_storage storage{};
+		static bool inited = [&storage](){ storage.load_from_persistent_storage(); return true; }();
 		return storage;
 	}
 	bool wifi_changed{false};
@@ -61,6 +63,18 @@ struct wifi_storage{
 		// remove old wifis
 		uint64_t cur_us = time_us_64();
 		wifis.remove_if([cur_us](const auto &e){ return cur_us - e.last_seen_us > DISCOVER_TIMEOUT_US; });
+	}
+
+	void write_to_persistent_storage() {
+		persistent_storage_t::Default().write(hostname.storage, &persistent_storage_layout::hostname);
+		persistent_storage_t::Default().write(ssid_wifi.storage, &persistent_storage_layout::ssid_wifi);
+		persistent_storage_t::Default().write(pwd_wifi.storage, &persistent_storage_layout::pwd_wifi);
+	}
+
+	void load_from_persitent_storage() {
+		persistent_storage_t::Default().read(&persistent_storage_layout::hostname, hostname.storage);
+		persistent_storage_t::Default().read(&persistent_storage_layout::ssid_wifi, ssid_wifi.storage);
+		persistent_storage_t::Default().read(&persistent_storage_layout::pwd_wifi, pwd_wifi.storage);
 	}
 };
 

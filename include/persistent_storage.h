@@ -10,6 +10,16 @@
 constexpr uint32_t FLASH_SIZE{2 << 20};
 
 /** 
+ * @brief Add new members always at the front and leave the ones in the back the same
+ * as the elements at the back of the layout always stay in the same position
+ */
+struct persistent_storage_layout {
+	std::array<char, 64> hostname;
+	std::array<char, 64> ssid_wifi;
+	std::array<char, 64> pwd_wifi;
+}
+
+/** 
  * @brief  strcut to easily access/setup permanent storage with a static size and lots of compile time validations.
  * Sets up the storage at the very end of the memory range and acquires as many bytes as needed for the persistent_mem_layout struct
  * to fit
@@ -38,7 +48,7 @@ constexpr uint32_t FLASH_SIZE{2 << 20};
 
 template<template persistent_mem_layout, int MAX_WRITE_SIZE = FLASH_PAGE_SIZE * 8>
 struct persistent_storage {
-	static constexpr uint32_t begin_offset{(FLASH_SIZE - sizeof(persistent_mem_layout)) / FLASH_PAGE_SIZE * FLASH_PAGE_SIZE}; // round down to multiple of FLASH_PAGE_SIZE
+	static constexpr uint32_t begin_offset{FLASH_SIZE - sizeof(persistent_mem_layout)}; // flash page alignment is done only when writing
 	static constexpr char *flash_begin{XIP_BASE};
 	static constexpr char *storage_begin{flash_begin + begin_offset};
 	static constexpr char *storage_end{flash_begin + FLASH_SIZE}; // 2MB after flash start is end
@@ -142,4 +152,6 @@ struct persistent_storage {
 		flash_range_program(data.dst_offset, data.src_start, write_size);
 	}
 };
+
+using persistent_storage_t = persistent_storage<persistent_storage_layout>;
 
