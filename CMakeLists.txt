@@ -59,9 +59,10 @@ target_include_directories(dcdc-converter PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries(dcdc-converter
+        pico_stdlib
+        hardware_flash
         pico_cyw43_arch_lwip_sys_freertos
         pico_lwip_mdns
-        pico_stdlib
         FreeRTOS-Kernel-Heap4 # FreeRTOS kernel and dynamic heap
         dcdc-converter-html
 )

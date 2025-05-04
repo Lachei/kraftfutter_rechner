@@ -74,7 +74,7 @@ struct persistent_storage {
 		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 		uint32_t start_idx_data = begin_offset + *reinterpret_cast<uintptr_t*>(&member);
 		uint32_t start_idx_paged = start_idx_data / FLASH_PAGE_SIZE * FLASH_PAGE_SIZE;
-		uint32_t end_idx_data = start_idx_data + sizeof(M);
+		uint32_t end_idx_data = start_idx_data + sizeof(T);
 		uint32_t end_idx_paged = (end_idx_data + FLASH_PAGE_SIZE - 1) / FLASH_PAGE_SIZE * FLASH_PAGE_SIZE;
 		if (end_idx_paged - start_idx_paged > MAX_WRITE_SIZE) {
 			LogError("persistent_storage::write() too large data to write, abort.");
@@ -128,9 +128,9 @@ struct persistent_storage {
 	/*INTERNAL*/ err_t _write_impl(uint32_t start_paged, uint32_t start_data, uint32_t end_data, uint32_t end_paged) {
 		scoped_lock lock{_memory_mutex};
 		if (start_data != start_paged)
-			std::copy(flash_begin + start_paged, flash_begin + start_data, _write_buffer.data());	
+			memcpy(_write_buffer.data(), flash_begin + start_paged, start_data - start_paged);	
 		if (end_data != end_paged)
-			std::copy(flash_begin + end_data, flash_begin + end_paged, _write_buffer.data() + end_data - start_paged);	
+			memcpy(_write_buffer.data() + end_data - start_paged, flash_begin + end_data, end_paged - end_data);	
 		_write_data write_data{.src_start = _write_buffer.data(), 
 					.src_end = _write_buffer.data() + end_paged - start_paged, 
 					.dst_offset = start_paged};
@@ -140,7 +140,7 @@ struct persistent_storage {
 			return err;
 		return flash_safe_execute(_flash_program, reinterpret_cast<void*>(&write_data), UINT32_MAX);
 	}
-	/*INTERNAL*/ static void _flash_erase(void *param) {
+	/*INTERNAL*/ static void __no_inline_not_in_flash_func(_flash_erase)(void *param) {
 		const _write_data &data = *reinterpret_cast<_write_data*>(param);
 		const uint32_t write_size = data.src_end - data.src_start;
 		if (write_size % FLASH_PAGE_SIZE != 0) {
@@ -153,7 +153,7 @@ struct persistent_storage {
 		}
 		flash_range_erase(data.dst_offset, write_size);
 	}
-	/*INTERNAL*/ static void _flash_program(void *param) {
+	/*INTERNAL*/ static void __no_inline_not_in_flash_func(_flash_program)(void *param) {
 		const _write_data &data = *reinterpret_cast<_write_data*>(param);
 		const uint32_t write_size = data.src_end - data.src_start;
 		if (write_size % FLASH_PAGE_SIZE != 0) {

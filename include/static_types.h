@@ -50,7 +50,7 @@ struct static_string {
 	constexpr bool empty() const { return cur_size == 0; }
 	constexpr int size() const { return cur_size; }
 	constexpr void make_c_str_safe() { if (static_cast<uint32_t>(cur_size) < storage.size()) storage[cur_size] = '\0'; }
-	constexpr void sanitize() { if (cur_size > N) cur_size = 0; }
+	constexpr void sanitize() { if (cur_size > N || cur_size < 0) cur_size = 0; }
 };
 
 template<typename T, int N>
@@ -67,7 +67,7 @@ struct static_vector {
 	constexpr void clear() { cur_size = 0; }
 	constexpr bool empty() const { return cur_size == 0; }
 	constexpr int size() const { return cur_size; }
-	constexpr void sanitize() { if (cur_size > N) cur_size = 0; }
+	constexpr void sanitize() { if (cur_size > N || cur_size < 0) cur_size = 0; }
 };
 
 template<typename T, int N>

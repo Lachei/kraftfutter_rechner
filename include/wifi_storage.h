@@ -17,13 +17,13 @@ struct wifi_storage{
 	static_vector<wifi_info, 8> wifis{};
 	static wifi_storage& Default() {
 		static wifi_storage storage{};
-		[[maybe_unused]] static bool inited = [](){ LogInfo("Writing Data");storage.write_to_persistent_storage(); LogInfo("Data written"); storage.load_from_persistent_storage(); return true; }();
+		[[maybe_unused]] static bool inited = [](){ storage.load_from_persistent_storage(); return true; }();
 		return storage;
 	}
 	bool wifi_changed{true};
 	bool wifi_connected{false};
-	static_string<64> ssid_wifi{WIFI_SSID};
-	static_string<64> pwd_wifi{WIFI_PASSWORD};
+	static_string<64> ssid_wifi{};
+	static_string<64> pwd_wifi{};
 	bool hostname_inited{false};
 	bool hostname_changed{true};
 	static_string<64> hostname{"DcDcConverter"};
@@ -74,9 +74,12 @@ struct wifi_storage{
 	}
 
 	void write_to_persistent_storage() {
-		persistent_storage_t::Default().write(hostname, &persistent_storage_layout::hostname);
-		persistent_storage_t::Default().write(ssid_wifi, &persistent_storage_layout::ssid_wifi);
-		persistent_storage_t::Default().write(pwd_wifi, &persistent_storage_layout::pwd_wifi);
+		if (PICO_OK != persistent_storage_t::Default().write(hostname, &persistent_storage_layout::hostname))
+			LogError("Failed to store hostname");
+		if (PICO_OK != persistent_storage_t::Default().write(ssid_wifi, &persistent_storage_layout::ssid_wifi))
+			LogError("Failed to store ssid_wifi");
+		if (PICO_OK != persistent_storage_t::Default().write(pwd_wifi, &persistent_storage_layout::pwd_wifi))
+			LogError("Failed to store pwd_wifi");
 	}
 
 	void load_from_persistent_storage() {
@@ -93,7 +96,7 @@ struct wifi_storage{
 		hostname_changed = true;
 		LogInfo("Loaded hostanme size: {}", hostname.size());
 		LogInfo("Loaded ssid size: {}", ssid_wifi.size());
-		LogInfo("Loaded pwd size: {}", pwd_wifi.size());
+		LogInfo("Loaded pwd siz: {}", pwd_wifi.size());
 	}
 
 	/*INTERNAL*/ static int _scan_result(void *, const cyw43_ev_scan_result_t *result) {
