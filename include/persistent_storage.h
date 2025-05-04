@@ -1,23 +1,27 @@
 #pragma once
 
-#include <mutex>
+#include <cmath>
 
 #include "pico/flash.h"
+#include "pico/stdlib.h"
 #include "hardware/flash.h"
 
 #include "log_storage.h"
+#include "mutex.h"
 
-constexpr uint32_t FLASH_SIZE{2 << 20};
+constexpr uint32_t FLASH_SIZE{PICO_FLASH_SIZE_BYTES};
 
 /** 
  * @brief Add new members always at the front and leave the ones in the back the same
  * as the elements at the back of the layout always stay in the same position
  */
 struct persistent_storage_layout {
-	std::array<char, 64> hostname;
-	std::array<char, 64> ssid_wifi;
-	std::array<char, 64> pwd_wifi;
-}
+	static_string<64> hostname;
+	static_string<64> ssid_wifi;
+	static_string<64> pwd_wifi;
+};
+
+static char *flash_begin{reinterpret_cast<char*>(uintptr_t(XIP_BASE))};
 
 /** 
  * @brief  strcut to easily access/setup permanent storage with a static size and lots of compile time validations.
@@ -46,37 +50,39 @@ struct persistent_storage_layout {
  * persistent_storage_t::Default().read(&layout::storage_b, mem_b);
  */
 
-template<template persistent_mem_layout, int MAX_WRITE_SIZE = FLASH_PAGE_SIZE * 8>
+template<typename persistent_mem_layout, int MAX_WRITE_SIZE = FLASH_PAGE_SIZE * 8>
 struct persistent_storage {
 	static constexpr uint32_t begin_offset{FLASH_SIZE - sizeof(persistent_mem_layout)}; // flash page alignment is done only when writing
-	static constexpr char *flash_begin{XIP_BASE};
-	static constexpr char *storage_begin{flash_begin + begin_offset};
-	static constexpr char *storage_end{flash_begin + FLASH_SIZE}; // 2MB after flash start is end
+	const char *storage_begin{flash_begin + begin_offset};
+	const char *storage_end{flash_begin + FLASH_SIZE}; // 2MB after flash start is end
 
-	persistent_storage& Default() {
+	static persistent_storage& Default() {
 		static persistent_storage p{};
 		return p;
 	}
 
-	std::mutex _memory_mutex{};
+	mutex _memory_mutex{};
 	std::array<char, MAX_WRITE_SIZE> _write_buffer{};
 
-	template<auto M>
+	template<typename M>
 	using mem_t = decltype(std::declval<persistent_mem_layout>().*std::declval<M>());
 
 	/** @brief To be used with member pointers: int Struct:: *member = &Struct::member_a; */
-	template<typename M, typename T = mem_t<M>> requires std::islessequal(sizeof(T), MAX_WRITE_SIZE)
+	template<typename M, typename T = mem_t<M>> requires (std::islessequal(sizeof(T), MAX_WRITE_SIZE))
 	err_t write(const T &data, M member) {
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 		uint32_t start_idx_data = begin_offset + *reinterpret_cast<uintptr_t*>(&member);
 		uint32_t start_idx_paged = start_idx_data / FLASH_PAGE_SIZE * FLASH_PAGE_SIZE;
 		uint32_t end_idx_data = start_idx_data + sizeof(M);
 		uint32_t end_idx_paged = (end_idx_data + FLASH_PAGE_SIZE - 1) / FLASH_PAGE_SIZE * FLASH_PAGE_SIZE;
 		if (end_idx_paged - start_idx_paged > MAX_WRITE_SIZE) {
 			LogError("persistent_storage::write() too large data to write, abort.");
-			return PICO_ERR;
+			return PICO_ERROR_GENERIC;
 		}
-		std::memcpy(_write_buffer.data() + start_idx_data - start_idx_paged, &data, sizeof(M));
-		retur _write_impl(start_idx_paged, start_idx_data, end_idx_data, end_idx_paged);
+		memcpy(_write_buffer.data() + start_idx_data - start_idx_paged, &data, sizeof(T));
+		#pragma GCC diagnostic pop
+		return _write_impl(start_idx_paged, start_idx_data, end_idx_data, end_idx_paged);
 	}
 	/** @brief Range based write overload, see write() for usage. Size has to be given in bytes written */
 	template<typename M, typename T = mem_t<M>::value_t>
@@ -85,36 +91,45 @@ struct persistent_storage {
 			return PICO_OK;
 		if (end_idx > member.size() || start_idx > member.size() || start_idx > end_idx) {
 			LogError("persistent_storage::write() indices out of bounds, abort.");
-			return PICO_ERR;
+			return PICO_ERROR_GENERIC;
 		}
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 		uint32_t start_idx_data = begin_offset + *reinterpret_cast<uintptr_t*>(&member) + start_idx * sizeof(T);
 		uint32_t start_idx_paged = start_idx_data / FLASH_PAGE_SIZE * FLASH_PAGE_SIZE;
 		uint32_t end_idx_data = start_idx_data + sizeof(T) * (end_idx - start_idx);
 		uint32_t end_idx_paged = (end_idx_data + FLASH_PAGE_SIZE - 1) / FLASH_PAGE_SIZE * FLASH_PAGE_SIZE;
 		if (end_idx_paged - start_idx_paged > MAX_WRITE_SIZE) {
 			LogError("persistent_storage::write() too large data to write, abort.");
-			return PICO_ERR;
+			return PICO_ERROR_GENERIC;
 		}
-		std::memcpy(_write_buffer.data() + start_idx_data - start_idx_paged, data, end_idx_data - start_idx_data);
-		retur _write_impl(start_idx_paged, start_idx_data, end_idx_data, end_idx_paged);
+		memcpy(_write_buffer.data() + start_idx_data - start_idx_paged, data, end_idx_data - start_idx_data);
+		#pragma GCC diagnostic pop
+		return _write_impl(start_idx_paged, start_idx_data, end_idx_data, end_idx_paged);
 	}
-	template<typename M, typename T = mem_t<M>> requires std::islessequal(sizeof(T), MAX_WRITE_SIZE)
-	void read(M member, mem_t<member>& out) {
+	template<typename M, typename T = mem_t<M>> requires (std::islessequal(sizeof(T), MAX_WRITE_SIZE))
+	void read(M member, T& out) {
 		// read is a simple copy from flash memory
-		std::memcpy(&out, storage_begin + *reinterpret_cast<uintptr_t*>(&member), sizeof(M));
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+		memcpy(&out, storage_begin + *reinterpret_cast<uintptr_t*>(&member), sizeof(T));
+		#pragma GCC diagnostic pop
 	}
 	template<typename M, typename T = mem_t<M>::value_t>
 	void read_array_range(M member, uint32_t start_idx, uint32_t end_idx, M::value_t* out) {
 		// read is a simple copy from flash memory
-		std::memcpy(out, storage_begin + *reinterpret_cast<uintptr_t*>(&member) + start_idx * sizeof(T), sizeof(T) * (end_idx - start_idx));
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+		memcpy(out, storage_begin + *reinterpret_cast<uintptr_t*>(&member) + start_idx * sizeof(T), sizeof(T) * (end_idx - start_idx));
+		#pragma GCC diagnostic pop
 	}
 
 	/*INTERNAL*/ struct _write_data {const char *src_start, *src_end; uint32_t dst_offset;}; // dst offset is the offset of the flash begin
 	/*INTERNAL*/ err_t _write_impl(uint32_t start_paged, uint32_t start_data, uint32_t end_data, uint32_t end_paged) {
-		std::scoped_lock lock{_memory_mutex};
-		if (start_idx_data != start_idx_paged)
+		scoped_lock lock{_memory_mutex};
+		if (start_data != start_paged)
 			std::copy(flash_begin + start_paged, flash_begin + start_data, _write_buffer.data());	
-		if (end_idx_data != end_idx_paged)
+		if (end_data != end_paged)
 			std::copy(flash_begin + end_data, flash_begin + end_paged, _write_buffer.data() + end_data - start_paged);	
 		_write_data write_data{.src_start = _write_buffer.data(), 
 					.src_end = _write_buffer.data() + end_paged - start_paged, 
@@ -123,10 +138,10 @@ struct persistent_storage {
 		err_t err = flash_safe_execute(_flash_erase, reinterpret_cast<void*>(&write_data), UINT32_MAX);
 		if (err != PICO_OK)
 			return err;
-		return flash_safe_execute(_write_impl, reinterpret_cast<void*>(&write_data), UINT32_MAX);
+		return flash_safe_execute(_flash_program, reinterpret_cast<void*>(&write_data), UINT32_MAX);
 	}
 	/*INTERNAL*/ static void _flash_erase(void *param) {
-		const _write_data &data = reinterpret_cast<_write_data&>(*param);
+		const _write_data &data = *reinterpret_cast<_write_data*>(param);
 		const uint32_t write_size = data.src_end - data.src_start;
 		if (write_size % FLASH_PAGE_SIZE != 0) {
 			LogError("_flash_erase(): write range must be a multiple of the flash_page_size. Ignoreing write");
@@ -139,7 +154,7 @@ struct persistent_storage {
 		flash_range_erase(data.dst_offset, write_size);
 	}
 	/*INTERNAL*/ static void _flash_program(void *param) {
-		const _write_data &data = reinterpret_cast<_write_data&>(*param);
+		const _write_data &data = *reinterpret_cast<_write_data*>(param);
 		const uint32_t write_size = data.src_end - data.src_start;
 		if (write_size % FLASH_PAGE_SIZE != 0) {
 			LogError("_flash_program(): write range must be a multiple of the flash_page_size. Ignoreing write");
@@ -149,7 +164,7 @@ struct persistent_storage {
 			LogError("_flash_program(): write range overflows storage. Ignoring write.");
 			return;
 		}
-		flash_range_program(data.dst_offset, data.src_start, write_size);
+		flash_range_program(data.dst_offset, reinterpret_cast<const uint8_t*>(data.src_start), write_size);
 	}
 };
 

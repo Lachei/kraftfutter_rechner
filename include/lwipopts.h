@@ -14,7 +14,7 @@
 #endif
 #define MEM_ALIGNMENT               4
 #ifndef MEM_SIZE
-#define MEM_SIZE                    4000
+#define MEM_SIZE                    8096
 #endif
 #define MEMP_NUM_TCP_SEG            32
 #define MEMP_NUM_ARP_QUEUE          10
@@ -103,9 +103,7 @@
 #define LWIP_TIMEVAL_PRIVATE 0
 
 // not necessary, can be done either way
-#define LWIP_TCPIP_CORE_LOCKING_INPUT 1
+#define LWIP_TCPIP_CORE_LOCKING_INPUT 0
 #endif
-
-#define HTTPD_FSDATA_FILE "pico_fsdata.inc"
 
 #endif

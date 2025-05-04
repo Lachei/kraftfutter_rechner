@@ -27,13 +27,6 @@
 constexpr UBaseType_t STANDARD_TASK_PRIORITY = tskIDLE_PRIORITY + 1ul;
 constexpr UBaseType_t CONTROL_TASK_PRIORITY = tskIDLE_PRIORITY + 10ul;
 
-static void mdns_response_callback(struct mdns_service *service, void*)
-{
-  err_t res = mdns_resp_add_service_txtitem(service, "path=/", 6);
-  if (res != ERR_OK)
-    LogError("mdns add service txt failed");
-}
-
 void usb_comm_task(void *) {
     LogInfo("Usb communication task");
     crypto_storage::Default();
@@ -47,7 +40,7 @@ void measure_task(void *) {
 }
 
 void control_task(void *) {
-    get_absolute_time();
+    time_us_64();
 
 }
 
@@ -56,32 +49,15 @@ void wifi_search_task(void *) {
     if (wifi_storage::Default().ssid_wifi.empty()) // onyl start the access point by default if no normal wifi connection is set
         access_point::Default().init();
 
-    netif_set_hostname(&cyw43_state.netif[CYW43_ITF_STA], wifi_storage::Default().hostname.data());
-    mdns_resp_init();
-    mdns_resp_add_netif(&cyw43_state.netif[CYW43_ITF_STA], wifi_storage::Default().hostname.data());
-    mdns_resp_add_service(&cyw43_state.netif[CYW43_ITF_STA], wifi_storage::Default().mdns_service_name.data(), "_http", DNSSD_PROTO_TCP, 80, mdns_response_callback, NULL);
+    wifi_storage::Default().update_hostname();
 
     for (;;) {
-        // connect to wifi
-        if (wifi_storage::Default().ssid_wifi.view.size() && (CYW43_LINK_JOIN != cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) || wifi_storage::Default().wifi_changed)) {
-            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
-            LogInfo("Trying to connect to wifi");
-            if (0 != cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 1000))
-                LogWarning("failed to connect, retry in 5 seconds");
-            wifi_storage::Default().wifi_changed = false;
-        } 
-        wifi_storage::Default().wifi_connected = CYW43_LINK_JOIN == cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA);
+        LogInfo("Wifi update loop");
+        wifi_storage::Default().update_wifi_connection();
         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, wifi_storage::Default().wifi_connected);
-        // rename the hostnaem
-        if (wifi_storage::Default().hostname_changed) {
-            LogInfo("Hostname change detected, adopting hostname");
-            netif_set_hostname(&cyw43_state.netif[CYW43_ITF_STA], wifi_storage::Default().hostname.data());
-            mdns_resp_rename_netif(&cyw43_state.netif[CYW43_ITF_STA], wifi_storage::Default().hostname.data());
-            wifi_storage::Default().hostname_changed = false;
-        }
-        LogInfo("Rescan wifi access points");
+        wifi_storage::Default().update_hostname();
         wifi_storage::Default().update_scanned();
-        vTaskDelay(5000);
+        vTaskDelay(wifi_storage::Default().wifi_connected ? 5000: 1000);
     }
 }
 
@@ -106,8 +82,13 @@ void startup_task(void *) {
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
     TaskHandle_t task_usb_comm;
     TaskHandle_t task_update_wifi;
-    xTaskCreate(usb_comm_task, "TestMainThread", configMINIMAL_STACK_SIZE, NULL, 1, &task_usb_comm);	// usb task also has to be started only after cyw43 init as some wifi functions are available
-    xTaskCreate(wifi_search_task, "UpdateWifiThread", configMINIMAL_STACK_SIZE, NULL, 1, &task_update_wifi);
+    auto err = xTaskCreate(usb_comm_task, "usb_comm", configMINIMAL_STACK_SIZE / 4, NULL, 1, &task_usb_comm);	// usb task also has to be started only after cyw43 init as some wifi functions are available
+    if (err != pdPASS)
+        LogError("Failed to start usb communication task with code {}" ,err);
+    err = xTaskCreate(wifi_search_task, "UpdateWifiThread", configMINIMAL_STACK_SIZE / 4, NULL, 1, &task_update_wifi);
+    if (err != pdPASS)
+        LogError("Failed to start usb communication task with code {}" ,err);
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
     for (;;) vTaskDelay(1<<20);
 }
 

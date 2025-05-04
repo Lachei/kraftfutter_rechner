@@ -6,47 +6,51 @@
 
 template<int N>
 struct static_string {
+	int cur_size{};
 	std::array<char, N> storage{};
-	std::string_view view{};
 	constexpr static_string() = default;
 	constexpr static_string(std::string_view d) {
-		size_t s = std::min(d.size(), storage.size());
-		std::copy_n(d.begin(), s, storage.begin());
-		view = std::string_view{storage.data(), s};
+		cur_size = std::min(d.size(), storage.size());
+		std::copy_n(d.begin(), cur_size, storage.begin());
 	}
-	constexpr void set_size(int s) { view = std::string_view{storage.begin(), storage.begin() + s}; }
+	constexpr std::string_view sv() const { return std::string_view{storage.data(), static_cast<size_t>(cur_size)}; }
+	constexpr void set_size(int s) { cur_size = s; }
 	constexpr void fill(std::string_view d) { 
-		size_t s = std::min(d.size(), storage.size());
-		std::copy_n(d.begin(), s, storage.begin());
-		view = std::string_view{storage.data(), s}; 
+		cur_size = std::min(d.size(), storage.size());
+		std::copy_n(d.begin(), cur_size, storage.begin());
 	}
 	constexpr void append(std::string_view d) { 
-		size_t s = std::min<size_t>(d.size(), storage.size() - view.size());
-		std::copy_n(d.begin(), s, storage.data() + view.size());
-		view = std::string_view{storage.data(), view.size() + s}; 
+		size_t s = std::min<size_t>(d.size(), storage.size() - cur_size);
+		std::copy_n(d.begin(), s, storage.data() + cur_size);
+		cur_size += s;
 	}
 	constexpr void append(char c) {
-		if (view.size() == storage.size())
+		if (cur_size == storage.size())
 			return;
-		storage[view.size()] = c;
-		view = std::string_view{storage.data(), view.size() + 1};
+		storage[cur_size++] = c;
 	}
 	template<typename... Args>
 	constexpr int fill_formatted(std::format_string<Args...> fmt, Args&&... args) { 
 		auto info = std::format_to_n(storage.data(), storage.size(), fmt, std::forward<Args>(args)...); 
-		view = std::string_view{storage.data(), static_cast<size_t>(info.size)};
-		return info.size;
+		cur_size = info.size;
+		return cur_size;
 	}
 	template<typename... Args>
 	constexpr int append_formatted(std::format_string<Args...> fmt, Args&&... args) { 
-		auto info = std::format_to_n(storage.data() + view.size(), storage.size() - view.size(), fmt, std::forward<Args>(args)...); 
-		view = std::string_view{storage.data(), view.size() + info.size};
-		return info.size;
+		int write_size = storage.size() - cur_size;
+		auto info = std::format_to_n(storage.data() + cur_size, write_size, fmt, std::forward<Args>(args)...); 
+		write_size = std::min(info.size, write_size); 
+		cur_size += write_size;
+		return write_size;
 	}
+	constexpr const char* data() const { return storage.data(); }
 	constexpr char* data() { return storage.data(); }
-	constexpr void clear() { view = {}; }
-	constexpr bool empty() const { return view.empty(); }
-	constexpr void make_c_str_safe() { if (view.size() < storage.size()) storage[view.size()] = '\0'; }
+	constexpr const char* end() const { return storage.data() + cur_size; }
+	constexpr void clear() { cur_size = 0; }
+	constexpr bool empty() const { return cur_size == 0; }
+	constexpr int size() const { return cur_size; }
+	constexpr void make_c_str_safe() { if (static_cast<uint32_t>(cur_size) < storage.size()) storage[cur_size] = '\0'; }
+	constexpr void sanitize() { if (cur_size > N) cur_size = 0; }
 };
 
 template<typename T, int N>
@@ -63,6 +67,7 @@ struct static_vector {
 	constexpr void clear() { cur_size = 0; }
 	constexpr bool empty() const { return cur_size == 0; }
 	constexpr int size() const { return cur_size; }
+	constexpr void sanitize() { if (cur_size > N) cur_size = 0; }
 };
 
 template<typename T, int N>
@@ -102,7 +107,7 @@ template<int N, typename... Args>
 static std::string_view static_format(std::format_string<Args...> fmt, Args&&... args) {
 	static static_string<N> string{};
 	string.fill_formatted(fmt, std::forward<Args>(args)...);
-	return string.view;
+	return string.sv();
 }
 
 template<typename... Args>

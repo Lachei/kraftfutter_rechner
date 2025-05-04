@@ -4,7 +4,7 @@
 #include <iostream>
 #include "static_types.h"
 
-constexpr int MAX_LOGS{32};
+constexpr int MAX_LOGS{64}; // with 128 the output buffer gets overfull, maybe solve by flush inbetween
 constexpr int MAX_LOG_LENGTH{64};
 
 enum struct log_severity {
@@ -49,16 +49,16 @@ struct log_storage {
 		for (const auto &[sev, message]: logs) {
 			switch(sev) {
 			case log_severity::Info:
-				s += dst.append_formatted("[Info   ]: {}\n", message.view);
+				s += dst.append_formatted("[Info   ]: {}\n", message.sv());
 				break;
 			case log_severity::Warning:
-				s += dst.append_formatted("[Warning]: {}\n", message.view);
+				s += dst.append_formatted("[Warning]: {}\n", message.sv());
 				break;
 			case log_severity::Error:
-				s += dst.append_formatted("[Error  ]: {}\n", message.view);
+				s += dst.append_formatted("[Error  ]: {}\n", message.sv());
 				break;
 			case log_severity::Fatal:
-				s += dst.append_formatted("[Fatal  ]: {}\n", message.view);
+				s += dst.append_formatted("[Fatal  ]: {}\n", message.sv());
 				break;
 			}
 		}

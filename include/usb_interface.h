@@ -85,7 +85,7 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 			case log_severity::Error  : out << "[Error  ]: "; break;
 			case log_severity::Fatal  : out << "[Fatal  ]: "; break;
 			}
-			out << log.message.view << '\n';
+			out << log.message.sv() << '\n';
 		}
 	} else {
 		out << "[ERROR] Command " << command << " unknown. Run command 'help' for a list of all available commands\n";

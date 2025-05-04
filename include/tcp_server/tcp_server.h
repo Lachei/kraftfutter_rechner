@@ -223,7 +223,6 @@ constexpr static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct p
 		LogError("tcp_server_recv() failed");
 		return tcp_server_result template_args_pure(arg, -1, tpcb);
 	}
-	LogInfo("Message recieved");
 	tcp_server template_args_pure& server = reinterpret_cast<tcp_server template_args_pure&>(*(char*)arg);
 	if (p->tot_len > buf_size)
 		LogError("Message too big, could not recieve");
@@ -313,7 +312,7 @@ constexpr static err_t tcp_server_accept (void *arg, struct tcp_pcb *client_pcb,
 template template_args
 void tcp_server template_args_pure::message_buffer::req_update_structured_views() {
 	// request line
-	std::string_view buffer_view{buffer.view};
+	std::string_view buffer_view{buffer.sv()};
 	method = extract_word(buffer_view);
 	path = extract_word(buffer_view);
 	http_version = extract_word(buffer_view);
@@ -356,8 +355,8 @@ void tcp_server template_args_pure::message_buffer::res_set_status_line(std::str
 	path = {};
 
 	buffer.append_formatted("{} {}\r\n", http_version, status);
-	this->http_version = buffer.view;
-	this->status = buffer.view;
+	this->http_version = buffer.sv();
+	this->status = buffer.sv();
 }
 
 template template_args
@@ -368,9 +367,9 @@ header tcp_server template_args_pure::message_buffer::res_add_header(std::string
 		LogWarning("res_add_header() body.size() != 0, is reset");
 	}
 
-	int s = buffer.view.size();
+	int s = buffer.size();
 	buffer.append_formatted("{}: {}\r\n", key, value);
-	if (!this->headers_view.headers.push(header{buffer.view.substr(s), buffer.view.substr(s + key.size() + 2)})) {
+	if (!this->headers_view.headers.push(header{buffer.sv().substr(s), buffer.sv().substr(s + key.size() + 2)})) {
 		LogWarning("Reached header limit {}", max_headers);
 		return {};
 	}
@@ -381,10 +380,10 @@ template template_args
 void tcp_server template_args_pure::message_buffer::res_write_body(std::string_view body) {
 	if (this->body.empty())
 		buffer.append("\r\n");
-	const char *s = this->body.empty() ? buffer.view.end(): this->body.begin();
+	const char *s = this->body.empty() ? buffer.end(): this->body.begin();
 
 	buffer.append(body);
-	this->body = std::string_view{s, buffer.view.end()};
+	this->body = std::string_view{s, buffer.end()};
 }
 
 template template_args
@@ -488,16 +487,26 @@ void tcp_server template_args_pure::process_request(uint32_t recieve_buffer_idx,
 
 template template_args
 err_t tcp_server template_args_pure::send_data(uint32_t send_buffer_index, struct tcp_pcb *client) {
-	auto &buffer = send_buffers[send_buffer_index].buffer;
-	err_t err = tcp_write(client, buffer.view.data(), buffer.view.size(), 0);
-	if (err != ERR_OK) {
-		LogError("Failed to write data {}", err);
-		return tcp_server_internal::tcp_server_result template_args_pure(this, -1, client);
-	}
-	err = tcp_output(client);
-	if (err != ERR_OK) {
-		LogError("Failed to output data {}", err);
-		return tcp_server_internal::tcp_server_result template_args_pure(this, -1, client);
+	std::string_view data = send_buffers[send_buffer_index].buffer.sv();
+	int retry = 10; // give 10 retries
+	while (data.size()) {
+		uint32_t free_space = std::min<uint32_t>(tcp_sndbuf(client), data.size());
+
+		err_t err = tcp_write(client, data.data(), free_space, 0);
+		if (err != ERR_OK) {
+			LogWarning("Failed to write data {}, retries left {}", err, retry);
+			if (--retry > 0) {
+				cyw43_arch_wait_for_work_until(make_timeout_time_ms(10));
+				continue;
+			}
+			return tcp_server_internal::tcp_server_result template_args_pure(this, -1, client);
+		}
+		data = data.substr(free_space);
+		err = tcp_output(client);
+		if (err != ERR_OK) {
+			LogError("Failed to output data {}", err);
+			return tcp_server_internal::tcp_server_result template_args_pure(this, -1, client);
+		}
 	}
 	return ERR_OK;
 }

@@ -20,7 +20,7 @@ tcp_server_typed& Webserver() {
 	const auto get_logs = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
 		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
-		res.res_add_header("Content-Type", "text/html");
+		res.res_add_header("Content-Type", "text/plain");
 		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
 		res.res_write_body(); // add header end sequence
 		int body_size = log_storage::Default().print_errors(res.buffer);
@@ -57,9 +57,9 @@ tcp_server_typed& Webserver() {
 		res.res_write_body("["); // add header end sequence and json object start
 		bool first_iter{true};
 		for (const auto& wifi: wifi_storage::Default().wifis) {
-			bool connected = wifi_storage::Default().wifi_connected && wifi_storage::Default().ssid_wifi.view == wifi.ssid.view;
+			bool connected = wifi_storage::Default().wifi_connected && wifi_storage::Default().ssid_wifi.sv() == wifi.ssid.sv();
 			res.buffer.append_formatted("{}{{\"ssid\":\"{}\",\"rssi\":{},\"connected\":{} }}\n", (first_iter? ' ': ','), 
-			       wifi.ssid.view, wifi.rssi, connected ? "true": "false");
+			       wifi.ssid.sv(), wifi.rssi, connected ? "true": "false");
 			first_iter = false;
 		}
 		res.res_write_body("]");
@@ -70,8 +70,8 @@ tcp_server_typed& Webserver() {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
 		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
 		res.res_add_header("Content-Type", "text/plain");
-		res.res_add_header("Content-Length", static_format<8>("{}", wifi_storage::Default().hostname.view.size()));
-		res.res_write_body(wifi_storage::Default().hostname.view);
+		res.res_add_header("Content-Length", static_format<8>("{}", wifi_storage::Default().hostname.size()));
+		res.res_write_body(wifi_storage::Default().hostname.sv());
 	};
 	const auto set_hostname = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
@@ -102,7 +102,7 @@ tcp_server_typed& Webserver() {
 	};
 	const auto connect_to_wifi = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");;
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
 		// should be in format: ${ssid} ${password}

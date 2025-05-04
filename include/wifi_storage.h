@@ -7,7 +7,7 @@
 #include "persistent_storage.h"
 
 struct wifi_storage{
-	static constexpr uint32_t DISCOVER_TIMEOUT_US = 1e7; // 10 seconds
+	static constexpr uint32_t DISCOVER_TIMEOUT_US = 6e6; // 6 seconds
 
 	struct wifi_info {
 		static_string<256> ssid{};
@@ -17,24 +17,92 @@ struct wifi_storage{
 	static_vector<wifi_info, 8> wifis{};
 	static wifi_storage& Default() {
 		static wifi_storage storage{};
-		static bool inited = [&storage](){ storage.load_from_persistent_storage(); return true; }();
+		[[maybe_unused]] static bool inited = [](){ LogInfo("Writing Data");storage.write_to_persistent_storage(); LogInfo("Data written"); storage.load_from_persistent_storage(); return true; }();
 		return storage;
 	}
-	bool wifi_changed{false};
+	bool wifi_changed{true};
 	bool wifi_connected{false};
 	static_string<64> ssid_wifi{WIFI_SSID};
 	static_string<64> pwd_wifi{WIFI_PASSWORD};
-	bool hostname_changed{false};
+	bool hostname_inited{false};
+	bool hostname_changed{true};
 	static_string<64> hostname{"DcDcConverter"};
 	static_string<64> mdns_service_name{"lachei_tcp_server"};
 
-	static int scan_result(void *, const cyw43_ev_scan_result_t *result) {
+	void update_hostname() {
+		if (!hostname_changed)
+			return;
+
+		LogInfo("Hostname change detected, adopting hostname");
+		netif_set_hostname(&cyw43_state.netif[CYW43_ITF_STA], hostname.data());
+		if (!hostname_inited) {
+			mdns_resp_init(); 
+			mdns_resp_add_netif(&cyw43_state.netif[CYW43_ITF_STA], hostname.data());
+			mdns_resp_add_service(&cyw43_state.netif[CYW43_ITF_STA], mdns_service_name.data(), "_http", DNSSD_PROTO_TCP, 80, _mdns_response_callback, NULL);
+		} else {
+			mdns_resp_rename_netif(&cyw43_state.netif[CYW43_ITF_STA], hostname.data());
+		}
+		
+		hostname_inited = true;
+		hostname_changed = false;
+	}
+
+	void update_wifi_connection() {
+		wifi_connected = CYW43_LINK_JOIN == cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA);
+		if (!wifi_changed || ssid_wifi.cur_size == 0 || pwd_wifi.cur_size < 8)
+			return;
+
+		LogInfo("Connecting to connect to wifi");
+		if (PICO_OK != cyw43_arch_wifi_connect_async(ssid_wifi.data(), pwd_wifi.data(), CYW43_AUTH_WPA2_AES_PSK)) {
+			LogWarning("failed to connect, retry next update_wifi_connection_call()");
+			return;
+		}
+
+		wifi_changed = false;
+	}
+	
+	void update_scanned() {
+		cyw43_wifi_scan_options_t scan_options = {0};
+		if (0 != cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, _scan_result)) {
+			LogError("Failed wifi scan");
+			return;
+		}
+
+		// remove old wifis
+		uint64_t cur_us = time_us_64();
+		wifis.remove_if([cur_us](const auto &e){ return cur_us - e.last_seen_us > DISCOVER_TIMEOUT_US; });
+	}
+
+	void write_to_persistent_storage() {
+		persistent_storage_t::Default().write(hostname, &persistent_storage_layout::hostname);
+		persistent_storage_t::Default().write(ssid_wifi, &persistent_storage_layout::ssid_wifi);
+		persistent_storage_t::Default().write(pwd_wifi, &persistent_storage_layout::pwd_wifi);
+	}
+
+	void load_from_persistent_storage() {
+		persistent_storage_t::Default().read(&persistent_storage_layout::hostname, hostname);
+		persistent_storage_t::Default().read(&persistent_storage_layout::ssid_wifi, ssid_wifi);
+		persistent_storage_t::Default().read(&persistent_storage_layout::pwd_wifi, pwd_wifi);
+		hostname.sanitize();
+		hostname.make_c_str_safe();
+		ssid_wifi.sanitize();
+		ssid_wifi.make_c_str_safe();
+		pwd_wifi.sanitize();
+		pwd_wifi.make_c_str_safe();
+		wifi_changed = true;
+		hostname_changed = true;
+		LogInfo("Loaded hostanme size: {}", hostname.size());
+		LogInfo("Loaded ssid size: {}", ssid_wifi.size());
+		LogInfo("Loaded pwd size: {}", pwd_wifi.size());
+	}
+
+	/*INTERNAL*/ static int _scan_result(void *, const cyw43_ev_scan_result_t *result) {
 		if (!result)
 			return 0;
 		// check if already added
 		std::string_view result_ssid{reinterpret_cast<const char *>(result->ssid)};
 		for (auto &wifi: wifi_storage::Default().wifis) {
-			if (wifi.ssid.view == result_ssid) {
+			if (wifi.ssid.sv() == result_ssid) {
 				wifi.rssi = (.8 * wifi.rssi) + (.2 * result->rssi);
 				wifi.last_seen_us = time_us_64();
 				return 0;
@@ -51,38 +119,19 @@ struct wifi_storage{
 		wifi->last_seen_us = time_us_64();
 		return 0;
 	}
-	
-	void update_scanned() {
-		// scan new wifis
-		cyw43_wifi_scan_options_t scan_options = {0};
-		if (0 != cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result)) {
-			LogError("Failed wifi scan");
-			return;
-		}
-
-		// remove old wifis
-		uint64_t cur_us = time_us_64();
-		wifis.remove_if([cur_us](const auto &e){ return cur_us - e.last_seen_us > DISCOVER_TIMEOUT_US; });
-	}
-
-	void write_to_persistent_storage() {
-		persistent_storage_t::Default().write(hostname.storage, &persistent_storage_layout::hostname);
-		persistent_storage_t::Default().write(ssid_wifi.storage, &persistent_storage_layout::ssid_wifi);
-		persistent_storage_t::Default().write(pwd_wifi.storage, &persistent_storage_layout::pwd_wifi);
-	}
-
-	void load_from_persitent_storage() {
-		persistent_storage_t::Default().read(&persistent_storage_layout::hostname, hostname.storage);
-		persistent_storage_t::Default().read(&persistent_storage_layout::ssid_wifi, ssid_wifi.storage);
-		persistent_storage_t::Default().read(&persistent_storage_layout::pwd_wifi, pwd_wifi.storage);
+	/*INTERNAL*/ static void _mdns_response_callback(struct mdns_service *service, void*)
+	{
+		err_t res = mdns_resp_add_service_txtitem(service, "path=/", 6);
+		if (res != ERR_OK)
+			LogError("mdns add service txt failed");
 	}
 };
 
 std::ostream& operator<<(std::ostream &os, const wifi_storage &w) {
 	os << "Wifi connected: " << (w.wifi_connected ? "true": "false") << '\n';
-	os << "Stored wifi ssid: " << w.ssid_wifi.view << '\n';
-	os << "hostname: " << w.hostname.view << '\n';
-	os << "mdns_service_name: " << w.mdns_service_name.view << '\n';
+	os << "Stored wifi ssid: " << w.ssid_wifi.sv() << '\n';
+	os << "hostname: " << w.hostname.sv() << '\n';
+	os << "mdns_service_name: " << w.mdns_service_name.sv() << '\n';
 	os << "Amount of discovered wifis: " << w.wifis.size() << '\n';
 	return os;
 }

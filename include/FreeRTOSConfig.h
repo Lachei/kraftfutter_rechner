@@ -49,7 +49,7 @@
 #define configSYSTICK_CLOCK_HZ                  1000000  /* This is always 1MHz on ARM I think.... */
 #define configTICK_RATE_HZ                      ( ( TickType_t ) 1000 )
 #define configMAX_PRIORITIES                    32
-#define configMINIMAL_STACK_SIZE                ( configSTACK_DEPTH_TYPE ) 2048
+#define configMINIMAL_STACK_SIZE                ( configSTACK_DEPTH_TYPE ) 1024 + 256
 #define configUSE_16_BIT_TICKS                  0
 
 #define configIDLE_SHOULD_YIELD                 1
