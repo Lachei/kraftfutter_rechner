@@ -60,6 +60,7 @@ target_include_directories(dcdc-converter PRIVATE
 )
 target_link_libraries(dcdc-converter
         pico_stdlib
+        pico_mbedtls
         hardware_flash
         pico_cyw43_arch_lwip_sys_freertos
         pico_lwip_mdns

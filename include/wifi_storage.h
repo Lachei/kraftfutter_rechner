@@ -28,6 +28,7 @@ struct wifi_storage{
 	bool hostname_changed{true};
 	static_string<64> hostname{"DcDcConverter"};
 	static_string<64> mdns_service_name{"lachei_tcp_server"};
+	static_string<64> user_pwd{};
 
 	void update_hostname() {
 		if (!hostname_changed)
@@ -86,12 +87,15 @@ struct wifi_storage{
 		persistent_storage_t::Default().read(&persistent_storage_layout::hostname, hostname);
 		persistent_storage_t::Default().read(&persistent_storage_layout::ssid_wifi, ssid_wifi);
 		persistent_storage_t::Default().read(&persistent_storage_layout::pwd_wifi, pwd_wifi);
+		persistent_storage_t::Default().read(&persistent_storage_layout::user_pwd, user_pwd);
 		hostname.sanitize();
 		hostname.make_c_str_safe();
 		ssid_wifi.sanitize();
 		ssid_wifi.make_c_str_safe();
 		pwd_wifi.sanitize();
 		pwd_wifi.make_c_str_safe();
+		user_pwd.sanitize();
+		user_pwd.make_c_str_safe();
 		wifi_changed = true;
 		hostname_changed = true;
 		LogInfo("Loaded hostanme size: {}", hostname.size());

@@ -5,9 +5,116 @@
 #include "dcdc-converter-html.h"
 #include "wifi_storage.h"
 #include "access_point.h"
+#include "persistent_storage.h"
+#include "mbedtls/sha256.h"
+
+constexpr std::string_view qop{"auth"};
+constexpr std::string_view realm{"webui"};
+constexpr std::string_view hex_map{"0123456789abcdef"};
+constexpr int SHA_SIZE{32};
 
 using tcp_server_typed = tcp_server<10, 4, 0, 0>;
 tcp_server_typed& Webserver() {
+	// Utility methods ----------------------------------------------------------
+	/** @brief checks the validity of the authorization header and returns the username if successfull. If not successfull returns an empty string_view */
+	const auto check_authorization_header = [] (std::string_view method, std::string_view auth_header_content) -> std::string_view {
+		constexpr char colon{';'};
+		std::string_view username;
+		std::string_view response;
+		std::string_view nonce;
+		std::string_view cnonce;
+		std::string_view nc; // nonce count, must not be quoted
+		std::string_view uri;
+
+		std::string_view cur = extract_word(auth_header_content);
+		if (cur != "Digest") {
+			LogError("check_authorization_header(): Missing Digest key word at the beginning");
+			return {};
+		}
+		while (cur = extract_word(auth_header_content, ','), cur.size()) {
+			std::string_view key = extract_word(cur, '='); // now cur holds the value
+			if (cur.size() && cur.front() == '"') // unquoting
+				cur.remove_prefix(1);
+			if (cur.size() && cur.back() == '"')
+				cur.remove_suffix(1);
+			if (key == "username")
+				username = cur;
+			else if (key == "realm" && cur != realm) {
+				LogError("check_authorization_header(): bad realm {}, should be webui", cur);
+				return {};
+			}
+			else if (key == "qop" && cur != qop) {
+				LogError("check_authorization_header(): bad qop {}, should be auth", cur);
+				return {};
+			}
+			else if (key == "response")
+				response = cur;
+			else if (key == "nonce")
+				nonce = cur;
+			else if (key == "cnonce")
+				cnonce = cur;
+			else if (key == "nc")
+				nc = cur;
+			else if (key == "uri")
+				uri = cur;
+			else
+				LogWarning("check_authorization_header(): unkwnown key {}", key);
+		}
+		if (response.size() != SHA_SIZE * 2) {
+			LogError("check_authorization_header(): response sha has the wrong length {}", response.size());
+			return {};
+		}
+		
+		std::array<uint8_t, SHA_SIZE * 2> sha_storage;
+		// H(A1) calculation
+		mbedtls_sha256_context ctx;
+		mbedtls_sha256_init(&ctx);
+		mbedtls_sha256_starts_ret(&ctx, 0); // 0 = SHA-256 (not SHA-224)
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)username.data(), username.size());
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)realm.data(), realm.size());
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)wifi_storage::Default().user_pwd.data(), wifi_storage::Default().user_pwd.size());
+		mbedtls_sha256_finish_ret(&ctx, sha_storage.data());
+		// H(A2) calculation
+		mbedtls_sha256_starts_ret(&ctx, 0); // 0 = SHA-256 (not SHA-224)
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)method.data(), method.size());
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)uri.data(), uri.size());
+		mbedtls_sha256_finish_ret(&ctx, sha_storage.data() + SHA_SIZE);
+		// final hash calc
+		mbedtls_sha256_starts_ret(&ctx, 0); // 0 = SHA-256 (not SHA-224)
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)sha_storage.data(), SHA_SIZE);
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)nonce.data(), nonce.size());
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)nc.data(), nc.size());
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)cnonce.data(), cnonce.size());
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)qop.data(), qop.size());
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)sha_storage.data() + SHA_SIZE, SHA_SIZE);
+		mbedtls_sha256_finish_ret(&ctx, sha_storage.data());
+
+		mbedtls_sha256_free(&ctx);
+
+		// compare the result
+		for (const uint8_t *e = (const uint8_t*)sha_storage.data(), *r = (const uint8_t*)response.data(); e < sha_storage.data() + 1; ++e, r += 2) {
+			if (hex_map[(*e) >> 4] != *r++) {
+				LogError("check_authorization_header(): Hex mismatch");
+				return {};
+			}
+			if (hex_map[(*e) & 0xf] != *r++) {
+				LogError("check_authorization_header(): Hex mismatch");
+				return {};
+			}
+		}
+		return username;
+	};
+
+	// methods for returning an http response -----------------------------------
+
 	const auto static_page_callback = [] (std::string_view page, std::string_view status, std::string_view type = "text/html") {
 		return [page, status, type](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res){
 			res.res_set_status_line(HTTP_VERSION, status);
@@ -16,6 +123,11 @@ tcp_server_typed& Webserver() {
 			res.res_add_header("Content-Length", static_format<8>("{}", page.size()));
 			res.res_write_body(page);
 		};
+	};
+	const auto return_unauthorized = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		res.res_set_status_line(HTTP_VERSION, STATUS_UNAUTHORIZED);
+		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("WWW-Authenticate", static_format<128>(R"(Digest algorithm="SHA-256",nonce="{:x}",realm="{}",qop="{}")", time_us_64(), realm, qop));
 	};
 	const auto get_logs = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
@@ -81,6 +193,8 @@ tcp_server_typed& Webserver() {
 		wifi_storage::Default().hostname.fill(req.body);
 		wifi_storage::Default().hostname.make_c_str_safe();
 		wifi_storage::Default().hostname_changed = true;
+		if (PICO_OK != persistent_storage_t::Default().write(wifi_storage::Default().hostname, &persistent_storage_layout::hostname))
+			LogError("Failed to store hostname");
 	};
 	const auto get_ap_active = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		std::string_view response = access_point::Default().active ? "true": "false";
@@ -120,6 +234,10 @@ tcp_server_typed& Webserver() {
 		wifi.pwd_wifi.make_c_str_safe();
 		wifi.wifi_connected = false;
 		wifi.wifi_changed = true;
+		if (PICO_OK != persistent_storage_t::Default().write(wifi.ssid_wifi, &persistent_storage_layout::ssid_wifi))
+			LogError("Failed to store ssid_wifi");
+		if (PICO_OK != persistent_storage_t::Default().write(wifi.pwd_wifi, &persistent_storage_layout::pwd_wifi))
+			LogError("Failed to store pwd_wifi");
 	};
 	static tcp_server_typed webserver{
 		.port = 80,

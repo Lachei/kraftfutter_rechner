@@ -15,14 +15,16 @@
 
 /** @brief Extract a word from the beginning of content, never reading over newlines.
  * Also removes any whitespace in the returned word and in the changed content. */
-std::string_view extract_word(std::string_view &content) {
+std::string_view extract_word(std::string_view &content, char delim = ' ') {
 	if (content.size() >= 2 && content[0] == '\r' && content[1] == '\n')
 		return {};
-	auto start_word = content.find_first_not_of(' ');
+	auto start_word = content.find_first_not_of(delim);
 	if (start_word == std::string_view::npos) start_word = 0;
-	auto end_word = content.find_first_of(" \r\n", start_word);
+	char ends[]{" \r\n"};
+	ends[0] = delim;
+	auto end_word = content.find_first_of(ends, start_word);
 	auto ret = content.substr(start_word, end_word - start_word);
-	auto s = content.find_first_not_of(' ', std::min(end_word, content.size() - 1));
+	auto s = content.find_first_not_of(delim, std::min(end_word, content.size() - 1));
 	if (s == std::string_view::npos)
 		content = {};
 	else
@@ -67,7 +69,7 @@ constexpr std::string_view HTTP_VERSION{"HTTP/1.1"};
 
 constexpr std::string_view STATUS_OK{"200 OK"};
 constexpr std::string_view STATUS_BAD_REQUEST{"400 Bad Request"};
-constexpr std::string_view STATUS_UAUTHORIZED{"401 Unauthorized"};
+constexpr std::string_view STATUS_UNAUTHORIZED{"401 Unauthorized"};
 constexpr std::string_view STATUS_NOT_FOUND{"404 Not Found"};
 constexpr std::string_view STATUS_INTERNAL_SERVER_ERROR{"500 Internal Server Error"};
 
