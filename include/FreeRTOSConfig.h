@@ -49,7 +49,7 @@
 #define configSYSTICK_CLOCK_HZ                  1000000  /* This is always 1MHz on ARM I think.... */
 #define configTICK_RATE_HZ                      ( ( TickType_t ) 1000 )
 #define configMAX_PRIORITIES                    32
-#define configMINIMAL_STACK_SIZE                ( configSTACK_DEPTH_TYPE ) 1024 + 256
+#define configMINIMAL_STACK_SIZE                ( configSTACK_DEPTH_TYPE ) 2048
 #define configUSE_16_BIT_TICKS                  0
 
 #define configIDLE_SHOULD_YIELD                 1
@@ -74,7 +74,7 @@
 /* Memory allocation related definitions. */
 #define configSUPPORT_STATIC_ALLOCATION         0
 #define configSUPPORT_DYNAMIC_ALLOCATION        1
-#define configTOTAL_HEAP_SIZE                   (56 * ( configMINIMAL_STACK_SIZE )) // heap size enough for 16 min stacks/tasks
+#define configTOTAL_HEAP_SIZE                   (64 * ( configMINIMAL_STACK_SIZE )) // heap size enough for 16 min stacks/tasks
 #define configAPPLICATION_ALLOCATED_HEAP        0
 
 /* Hook function related definitions. */

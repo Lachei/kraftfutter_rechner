@@ -2,6 +2,18 @@
 <html>
 <head><meta charset="utf-8"></head>
 <body>
- Einstellungen
+<h3>Einstellungen</h3>
+<h4>Passwort ändern</h4>
+<p><input id="pw1" type="password"><label for="pw1">Passwort eingeben</label>
+<p><input id="pw2" type="password"><label for="pw2">Passwort wiederholen</label>
+<p><button onclick="sp();">Passwort ändern</button>
+<p><pre id="e" class="er d">Passwörter nicht gleich</pre>
 </body>
+<script>
+var d=document;
+var pw1=d.getElementById("pw1");
+var pw2=d.getElementById("pw2");
+var e=d.getElementById("e");
+const sp=async()=>{if(pw1.value!=pw2.value)e.classList.remove("d");else {e.classList.add("d");await fetch("set_password",{method:"PUT",body:pw1.value});}};
+</script>
 </html>

@@ -82,6 +82,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         else:
             super().do_POST()
 
+    def do_PUT(self):
+        if self.path == '/set_password':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            content_len = int(self.headers.get('content-length', 0))
+            pwd = self.rfile.read(content_len).decode()
+            print('Set password to:', pwd)
+        else:
+            super().do_PUT()
+
 with socketserver.TCPServer(("", args.port), Handler) as httpd:
     print("serving at port", args.port)
     httpd.serve_forever()

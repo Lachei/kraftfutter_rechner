@@ -19,9 +19,10 @@
  <script>
   var p="u";
   var lo=0;
+  var m={};
   const d=document;
   const v=d.getElementById('v');
-  for(let a of d.getElementsByClassName("t")){a.onclick=()=>{let x=d.getElementById(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"}); p=a.classList[1];};};
+  for(let a of d.getElementsByClassName("t")){a.onclick=()=>{let x=d.getElementById(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"}); p=a.classList[1];if(a.classList[1] in m)m[a.classList[1]]();};};
   const ol=()=>{ let c = d.styleSheets[0].cssRules;
    let ct = '';[...c].forEach(r=>ct+=r.cssText);
    for (f of d.getElementsByClassName("tp"))f.contentDocument.head.innerHTML+="<style>"+ct+"</style>";

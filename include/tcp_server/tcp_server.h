@@ -3,60 +3,12 @@
 #include <functional>
 #include <atomic>
 
+#include "string_util.h"
 #include "static_types.h"
 
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 #include "log_storage.h"
-
-// ------------------------------------------------------------------------------
-// global helpers (maybe put into separate source)
-// ------------------------------------------------------------------------------
-
-/** @brief Extract a word from the beginning of content, never reading over newlines.
- * Also removes any whitespace in the returned word and in the changed content. */
-std::string_view extract_word(std::string_view &content, char delim = ' ') {
-	if (content.size() >= 2 && content[0] == '\r' && content[1] == '\n')
-		return {};
-	auto start_word = content.find_first_not_of(delim);
-	if (start_word == std::string_view::npos) start_word = 0;
-	char ends[]{" \r\n"};
-	ends[0] = delim;
-	auto end_word = content.find_first_of(ends, start_word);
-	auto ret = content.substr(start_word, end_word - start_word);
-	auto s = content.find_first_not_of(delim, std::min(end_word, content.size() - 1));
-	if (s == std::string_view::npos)
-		content = {};
-	else
-		content = content.substr(s);
-	return ret;
-}
-/** @brief Extract until newline */
-std::string_view extract_until_newline(std::string_view &content) {
-	if (content.size() >= 2 && content[0] == '\r' && content[1] == '\n')
-		return {};
-	auto start_word = content.find_first_not_of(' ');
-	if (start_word == std::string_view::npos) start_word = 0;
-	auto end_word = content.find_first_of("\r\n", start_word);
-	auto ret = content.substr(start_word, end_word - start_word);
-	auto s = end_word;
-	if (s == std::string_view::npos)
-		content = {};
-	else
-		content = content.substr(s);
-	return ret;
-}
-/** @brief Extract a newline including carriage return.
- *  @return bool with false if no newline sequence was found at the beginning of content,
- *  in which case content was not modified*/
-bool extract_newline(std::string_view &content) {
-	if (content.size() < 2)
-		return false;
-	if (content[0] != '\r' || content[1] != '\n')
-		return false;
-	content = content.substr(2);
-	return true;
-}
 
 // ------------------------------------------------------------------------------
 // struct declarations
@@ -70,6 +22,7 @@ constexpr std::string_view HTTP_VERSION{"HTTP/1.1"};
 constexpr std::string_view STATUS_OK{"200 OK"};
 constexpr std::string_view STATUS_BAD_REQUEST{"400 Bad Request"};
 constexpr std::string_view STATUS_UNAUTHORIZED{"401 Unauthorized"};
+constexpr std::string_view STATUS_FORBIDDEN{"403 Forbidden"};
 constexpr std::string_view STATUS_NOT_FOUND{"404 Not Found"};
 constexpr std::string_view STATUS_INTERNAL_SERVER_ERROR{"500 Internal Server Error"};
 
@@ -84,10 +37,10 @@ struct header {
 template<int max_headers>
 struct headers {
 	static_vector<header, max_headers> headers{};
-	header* begin() { return headers.begin(); }
-	header* end() { return headers.end(); }
-	std::string_view get_header(std::string_view key) {
-		for (auto & [k, value]: headers)
+	const header* begin() const { return headers.begin(); }
+	const header* end() const { return headers.end(); }
+	std::string_view get_header(std::string_view key) const {
+		for (const auto &[k, value]: headers)
 		if (key == k)
 			return value;
 		return {};
@@ -476,9 +429,9 @@ void tcp_server template_args_pure::process_request(uint32_t recieve_buffer_idx,
 	else if (recieve_buffer.method == "POST") 
 		prefixed_callback_call(post_endpoints);
 	else if (recieve_buffer.method == "PUT")
-		prefixed_callback_call(post_endpoints);
+		prefixed_callback_call(put_endpoints);
 	else if (recieve_buffer.method == "DELETE")
-		prefixed_callback_call(post_endpoints);
+		prefixed_callback_call(delete_endpoints);
 	else
 		default_endpoint_cb(recieve_buffer, send_buffer);
 

@@ -10,12 +10,24 @@
 
 // handle exactly one command from the input stream at a time (should be called in an endless loop)
 static constexpr inline void handle_usb_command(std::istream &in = std::cin, std::ostream &out = std::cout) {
+	const auto print_logs = [&out]{
+		for (const auto& log: log_storage::Default().logs) {
+			switch(log.severity) {
+			case log_severity::Info   : out << "[Info   ]: "; break;
+			case log_severity::Warning: out << "[Warning]: "; break;
+			case log_severity::Error  : out << "[Error  ]: "; break;
+			case log_severity::Fatal  : out << "[Fatal  ]: "; break;
+			}
+			out << log.message.sv() << '\n';
+		}
+	};
+
 	std::string command;
 	in >> command;
-	if (command.empty() || command == "-h" || command == "--help" || command == "help") {
+	if (command.empty() || command == "h" || command == "-h" || command == "--help" || command == "help") {
 		out << "Device controlling the powerstages for a dc-dc converter\n";
 		out << "The following commands are available to edit the state of the device:\n\n";
-		out << "  -h|--help|help\n";
+		out << "  h|-h|--help|help\n";
 		out << "    Prints This help menu\n\n";
 		out << "  status\n";
 		out << "    Prints the status of the iot device, including measurement values, setting values, error state, wifi status\n\n";
@@ -36,8 +48,12 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		out << "    Store the wifi credentials for a certain ssid and connect if its available\n\n";
 		out << "  set_log_level (info|warning|error|fatal)\n";
 		out << "    Set the log level to the specified value\n\n";;
-		out << "  print_logs\n";
+		out << "  log\n";
 		out << "    Print the log storage to the console\n\n";
+		out << "  logs\n";
+		out << "    Print the log storage with a separator line to the console\n\n";
+		out << "  s\n";
+		out << "    Print a separator line with dashes\n\n";
 	} else if (command == "status") {
 		out << "measurements:\n";
 		out << "-------------\n";
@@ -77,16 +93,13 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		else if (level == "error") log_storage::Default().cur_severity = log_severity::Error;
 		else if (level == "fatal") log_storage::Default().cur_severity = log_severity::Fatal;
 		else out << "[ERROR] severity " << level << " not allowed. Allowed values are: info|warning|error|fatal\n";
-	} else if (command == "print_logs") {
-		for (const auto& log: log_storage::Default().logs) {
-			switch(log.severity) {
-			case log_severity::Info   : out << "[Info   ]: "; break;
-			case log_severity::Warning: out << "[Warning]: "; break;
-			case log_severity::Error  : out << "[Error  ]: "; break;
-			case log_severity::Fatal  : out << "[Fatal  ]: "; break;
-			}
-			out << log.message.sv() << '\n';
-		}
+	} else if (command == "log") {
+		print_logs();
+	} else if (command == "logs") {
+		out << "--------------------------------------\n";
+		print_logs();
+	} else if (command == "s") {
+		out << "--------------------------------------\n";
 	} else {
 		out << "[ERROR] Command " << command << " unknown. Run command 'help' for a list of all available commands\n";
 	}

@@ -6,7 +6,7 @@
 #include "static_types.h"
 #include "persistent_storage.h"
 
-struct wifi_storage{
+struct wifi_storage {
 	static constexpr uint32_t DISCOVER_TIMEOUT_US = 6e6; // 6 seconds
 
 	struct wifi_info {
@@ -28,7 +28,6 @@ struct wifi_storage{
 	bool hostname_changed{true};
 	static_string<64> hostname{"DcDcConverter"};
 	static_string<64> mdns_service_name{"lachei_tcp_server"};
-	static_string<64> user_pwd{};
 
 	void update_hostname() {
 		if (!hostname_changed)
@@ -50,7 +49,7 @@ struct wifi_storage{
 
 	void update_wifi_connection() {
 		wifi_connected = CYW43_LINK_JOIN == cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA);
-		if (!wifi_changed || ssid_wifi.cur_size == 0 || pwd_wifi.cur_size < 8)
+		if ((wifi_connected && !wifi_changed) || ssid_wifi.cur_size == 0 || pwd_wifi.cur_size < 8)
 			return;
 
 		LogInfo("Connecting to connect to wifi");
@@ -87,15 +86,12 @@ struct wifi_storage{
 		persistent_storage_t::Default().read(&persistent_storage_layout::hostname, hostname);
 		persistent_storage_t::Default().read(&persistent_storage_layout::ssid_wifi, ssid_wifi);
 		persistent_storage_t::Default().read(&persistent_storage_layout::pwd_wifi, pwd_wifi);
-		persistent_storage_t::Default().read(&persistent_storage_layout::user_pwd, user_pwd);
 		hostname.sanitize();
 		hostname.make_c_str_safe();
 		ssid_wifi.sanitize();
 		ssid_wifi.make_c_str_safe();
 		pwd_wifi.sanitize();
 		pwd_wifi.make_c_str_safe();
-		user_pwd.sanitize();
-		user_pwd.make_c_str_safe();
 		wifi_changed = true;
 		hostname_changed = true;
 		LogInfo("Loaded hostanme size: {}", hostname.size());
