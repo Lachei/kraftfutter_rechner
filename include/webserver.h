@@ -170,7 +170,6 @@ tcp_server_typed& Webserver() {
 			fill_unauthorized(req, res);
 			return;
 		}
-		LogInfo("New password: {}", req.body);
 		crypto_storage::Default().set_password(req.body);
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
 		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
