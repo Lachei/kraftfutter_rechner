@@ -12,6 +12,7 @@ parser.add_argument('-p', '--port', help='The port the server listens to, defaul
 args = parser.parse_args()
 
 log_counter = 0
+login_counter = 0
 hostname = "A beatiful thing"
 ap_active = "true"
 
@@ -30,6 +31,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         global log_counter
+        global login_counter
         global hostname
         global ap_active
         if self.path == '/logs':
@@ -53,10 +55,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
             self.wfile.write(f'{hostname}'.encode())
+        elif self.path == '/user':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(f"Du {login_counter}".encode())
+            log_counter += 1
         else:
             super().do_GET()
 
     def do_POST(self):
+        global login_counter
         global hostname
         global ap_active
         if self.path == '/host_name':
@@ -79,6 +88,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
+        elif self.path == '/login':
+            content_len = int(self.headers.get('content-length', 0))
+            ap_active = self.rfile.read(content_len).decode()
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            login_counter += 1;
         else:
             super().do_POST()
 
@@ -95,5 +111,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 with socketserver.TCPServer(("", args.port), Handler) as httpd:
     print("serving at port", args.port)
-    httpd.serve_forever()
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        httpd.server_close()
 

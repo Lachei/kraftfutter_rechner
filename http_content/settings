@@ -14,6 +14,6 @@ var d=document;
 var pw1=d.getElementById("pw1");
 var pw2=d.getElementById("pw2");
 var e=d.getElementById("e");
-const sp=async()=>{if(pw1.value!=pw2.value)e.classList.remove("d");else {e.classList.add("d");await fetch("set_password",{method:"PUT",body:pw1.value});}};
+const sp=async()=>{if(pw1.value!=pw2.value)e.classList.remove("d");else {e.classList.add("d");await fetch("set_password",{method:"PUT",body:pw1.value});pw1.value=pw2.value="";}};
 </script>
 </html>

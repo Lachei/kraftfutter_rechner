@@ -3,6 +3,7 @@ h1{font-size:230%;}
 p{margin-left:1em;}
 button{background-color:#d9ffd9;cursor:pointer;border:none;padding:.7rem;border-radius:5px;border:1px solid grey;}
 button:hover{background-color:green;transition: background-color 150ms linear;}
+input[type=password]{margin-right: .5rem;}
 checkbox{appearance: none; width:40px; height:20px; background:#ccc; border-radius:20px; position:relative;" onchange="this.style.background=this.checked?'#4caf50':'#ccc';}
 details{padding:10px;border-radius:10px;border:1px solid black;cursor:pointer;margin:2px}
 #v{width:100%;height:100%;margin-top:4px;padding:1px;overflow:hidden;height:calc(100vh - 200px);}

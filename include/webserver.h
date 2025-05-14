@@ -10,7 +10,7 @@
 #include "persistent_storage.h"
 #include "crypto_storage.h"
 
-using tcp_server_typed = tcp_server<11, 4, 1, 0>;
+using tcp_server_typed = tcp_server<11, 5, 1, 0>;
 tcp_server_typed& Webserver() {
 	const auto static_page_callback = [] (std::string_view page, std::string_view status, std::string_view type = "text/html") {
 		return [page, status, type](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res){
@@ -28,21 +28,22 @@ tcp_server_typed& Webserver() {
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
 	};
-	const auto get_login = [&fill_unauthorized] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+	const auto post_login = [&fill_unauthorized] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		std::string_view auth_header = req.headers_view.get_header("Authorization");
-		if (auth_header.empty()) {
+		if (auth_header.empty() || crypto_storage::Default().check_authorization(req.method, auth_header).empty()) {
 			fill_unauthorized(req, res);
 			return;
 		}
-		std::string_view user = crypto_storage::Default().check_authorization(req.method, auth_header);
-		if (user.empty()) {
-			fill_unauthorized(req, res);
-			return;
-			res.res_set_status_line(HTTP_VERSION, STATUS_FORBIDDEN);
-			res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
-			res.res_add_header("Content-Length", "0");
-			res.res_write_body();
-			return;
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Content-Length", "0");
+		res.res_write_body();
+	};
+	const auto get_user = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		std::string_view user{};
+		std::string_view auth_header = req.headers_view.get_header("Authorization");
+		if (auth_header.size()) {
+			user = crypto_storage::Default().check_authorization(req.method, auth_header);
 		}
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
 		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
@@ -161,12 +162,7 @@ tcp_server_typed& Webserver() {
 	};
 	const auto set_password = [&fill_unauthorized] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		std::string_view auth_header = req.headers_view.get_header("Authorization");
-		if (auth_header.empty()) {
-			fill_unauthorized(req, res);
-			return;
-		}
-		std::string_view user = crypto_storage::Default().check_authorization(req.method, auth_header);
-		if (user.empty()) {
+		if (auth_header.empty() || crypto_storage::Default().check_authorization(req.method, auth_header).empty()) {
 			fill_unauthorized(req, res);
 			return;
 		}
@@ -185,8 +181,8 @@ tcp_server_typed& Webserver() {
 			tcp_server_typed::endpoint{{.path_match = true}, "/discovered_wifis", get_discovered_wifis},
 			tcp_server_typed::endpoint{{.path_match = true}, "/host_name", get_hostname},
 			tcp_server_typed::endpoint{{.path_match = true}, "/ap_active", get_ap_active},
-			// auth endpionts
-			tcp_server_typed::endpoint{{.path_match = true}, "/login", get_login},
+			// auth endpoints
+			tcp_server_typed::endpoint{{.path_match = true}, "/user", get_user},
 			// static file serve endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/", static_page_callback(INDEX_HTML, STATUS_OK)},
 			tcp_server_typed::endpoint{{.path_match = true}, "/index", static_page_callback(INDEX_HTML, STATUS_OK)},
@@ -200,6 +196,7 @@ tcp_server_typed& Webserver() {
 			tcp_server_typed::endpoint{{.path_match = true}, "/host_name", set_hostname},
 			tcp_server_typed::endpoint{{.path_match = true}, "/ap_active", set_ap_active},
 			tcp_server_typed::endpoint{{.path_match = true}, "/wifi_connect", connect_to_wifi},
+			tcp_server_typed::endpoint{{.path_match = true}, "/login", post_login},
 		},
 		.put_endpoints = {
 			tcp_server_typed::endpoint{{.path_match = true}, "/set_password", set_password},
