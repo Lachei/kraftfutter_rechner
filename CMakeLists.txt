@@ -22,7 +22,7 @@ project(dcdc-converter C CXX)
 
 pico_sdk_init()
 
-#set(CMAKE_BUILD_TYPE "MinSizeRel")
+set(CMAKE_BUILD_TYPE "MinSizeRel")
 
 if (NOT PICO_CYW43_SUPPORTED)
         message(FATAL_ERROR "Pico w not supported by your sdk. Make sure to have PICO_CYW43_SUPPORTED set by your sdk installation")

@@ -117,19 +117,19 @@ struct crypto_storage {
 		// H(A1) calculation
 		mbedtls_sha256_context ctx;
 		mbedtls_sha256_init(&ctx);
-		mbedtls_sha256_starts_ret(&ctx, 0); // 0 = SHA-256 (not SHA-224)
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)username.data(), username.size());
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)realm.data(), realm.size());
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)user_pwd.data(), user_pwd.size());
-		mbedtls_sha256_finish_ret(&ctx, sha_storage.data());
+		mbedtls_sha256_starts(&ctx, 0); // 0 = SHA-256 (not SHA-224)
+		mbedtls_sha256_update(&ctx, (const uint8_t*)username.data(), username.size());
+		mbedtls_sha256_update(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update(&ctx, (const uint8_t*)realm.data(), realm.size());
+		mbedtls_sha256_update(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update(&ctx, (const uint8_t*)user_pwd.data(), user_pwd.size());
+		mbedtls_sha256_finish(&ctx, sha_storage.data());
 		// H(A2) calculation
-		mbedtls_sha256_starts_ret(&ctx, 0); // 0 = SHA-256 (not SHA-224)
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)method.data(), method.size());
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)uri.data(), uri.size());
-		mbedtls_sha256_finish_ret(&ctx, sha_storage.data() + SHA_SIZE * 2);
+		mbedtls_sha256_starts(&ctx, 0); // 0 = SHA-256 (not SHA-224)
+		mbedtls_sha256_update(&ctx, (const uint8_t*)method.data(), method.size());
+		mbedtls_sha256_update(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update(&ctx, (const uint8_t*)uri.data(), uri.size());
+		mbedtls_sha256_finish(&ctx, sha_storage.data() + SHA_SIZE * 2);
 		// convert H1 and H2 to hex
 		auto *d = sha_storage.data() + 4 * SHA_SIZE - 1;
 		for (auto *c = sha_storage.data() + 3 * SHA_SIZE - 1; c >= sha_storage.data() + 2 * SHA_SIZE; --c) {
@@ -141,19 +141,19 @@ struct crypto_storage {
 			*d-- = hex_map[(*c) >> 4];
 		}
 		// final hash calc
-		mbedtls_sha256_starts_ret(&ctx, 0); // 0 = SHA-256 (not SHA-224)
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)sha_storage.data(), SHA_SIZE * 2);
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)nonce.data(), nonce.size());
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)nc.data(), nc.size());
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)cnonce.data(), cnonce.size());
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)qop.data(), qop.size());
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)&colon, 1);
-		mbedtls_sha256_update_ret(&ctx, (const uint8_t*)sha_storage.data() + SHA_SIZE * 2, SHA_SIZE * 2);
-		mbedtls_sha256_finish_ret(&ctx, sha_storage.data());
+		mbedtls_sha256_starts(&ctx, 0); // 0 = SHA-256 (not SHA-224)
+		mbedtls_sha256_update(&ctx, (const uint8_t*)sha_storage.data(), SHA_SIZE * 2);
+		mbedtls_sha256_update(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update(&ctx, (const uint8_t*)nonce.data(), nonce.size());
+		mbedtls_sha256_update(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update(&ctx, (const uint8_t*)nc.data(), nc.size());
+		mbedtls_sha256_update(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update(&ctx, (const uint8_t*)cnonce.data(), cnonce.size());
+		mbedtls_sha256_update(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update(&ctx, (const uint8_t*)qop.data(), qop.size());
+		mbedtls_sha256_update(&ctx, (const uint8_t*)&colon, 1);
+		mbedtls_sha256_update(&ctx, (const uint8_t*)sha_storage.data() + SHA_SIZE * 2, SHA_SIZE * 2);
+		mbedtls_sha256_finish(&ctx, sha_storage.data());
 
 		mbedtls_sha256_free(&ctx);
 

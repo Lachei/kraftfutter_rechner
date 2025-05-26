@@ -4,6 +4,7 @@
 /* System support */
 #define MBEDTLS_PLATFORM_MEMORY
 #define MBEDTLS_PLATFORM_C
+#define MBEDTLS_VERSION_C
 
 /* mbed TLS modules */
 #define MBEDTLS_SHA256_C
