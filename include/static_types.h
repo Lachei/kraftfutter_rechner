@@ -4,9 +4,9 @@
 #include <string_view>
 #include <format>
 
-template<int N>
+template<int N, typename size_type = int>
 struct static_string {
-	int cur_size{};
+	size_type cur_size{};
 	std::array<char, N> storage{};
 	constexpr static_string() = default;
 	constexpr static_string(std::string_view d) {
@@ -48,15 +48,15 @@ struct static_string {
 	constexpr const char* end() const { return storage.data() + cur_size; }
 	constexpr void clear() { cur_size = 0; }
 	constexpr bool empty() const { return cur_size == 0; }
-	constexpr int size() const { return cur_size; }
+	constexpr size_type size() const { return cur_size; }
 	constexpr void make_c_str_safe() { if (static_cast<uint32_t>(cur_size) < storage.size()) storage[cur_size] = '\0'; }
 	constexpr void sanitize() { if (cur_size > N || cur_size < 0) cur_size = 0; }
 };
 
-template<typename T, int N>
+template<typename T, int N, typename size_type = int>
 struct static_vector {
 	std::array<T, N> storage{};
-	int cur_size{};
+	size_type cur_size{};
 	constexpr T* begin() { return storage.begin(); }
 	constexpr T* end() { return storage.begin() + cur_size; }
 	constexpr const T* begin() const { return storage.begin(); }
@@ -68,15 +68,15 @@ struct static_vector {
 	constexpr void remove_if(F &&f) { for (int i = cur_size - 1; i >= 0; --i) if( f(storage[i]) ) { std::swap(storage[i], storage[cur_size - 1]); --cur_size; } }
 	constexpr void clear() { cur_size = 0; }
 	constexpr bool empty() const { return cur_size == 0; }
-	constexpr int size() const { return cur_size; }
+	constexpr size_type size() const { return cur_size; }
 	constexpr void sanitize() { if (cur_size > N || cur_size < 0) cur_size = 0; }
 };
 
-template<typename T, int N>
+template<typename T, int N, typename size_type = int>
 struct static_ring_buffer {
 	std::array<T, N> storage{};
-	int cur_start{};
-	int cur_write{};
+	size_type cur_start{};
+	size_type cur_write{};
 	bool full{false};
 	constexpr auto begin() { return iterator{*this, cur_start}; }
 	constexpr auto end() { return iterator{*this, cur_write}; }
@@ -91,7 +91,7 @@ struct static_ring_buffer {
 	constexpr bool push(T&& e) { *push() = std::move(e); return true; }
 	constexpr void clear() { cur_start = 0; cur_write = 0; full = false; }
 	constexpr bool empty() const { return cur_start == cur_write  && !full; }
-	constexpr int size() const { return full? N: cur_write - cur_start + (cur_start > cur_write ? N: 0); }
+	constexpr size_type size() const { return full? N: int(cur_write) - cur_start + (cur_start > cur_write ? N: 0); }
 	template <typename SR>
 	struct iterator {
 		SR &_p;

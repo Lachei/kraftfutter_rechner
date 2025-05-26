@@ -11,11 +11,26 @@
 
 constexpr uint32_t FLASH_SIZE{PICO_FLASH_SIZE_BYTES};
 
+constexpr int MAX_COWS{256};
+
+struct kuh {
+	static_string<15, uint8_t> name;
+	std::array<char, 12> ohrenmarke;
+	int halbandnr;
+	float kraftfuttermenge;
+	uint32_t abkalbungstag;
+	static_ring_buffer<uint32_t, 117> letze_fuetterungen;
+};
 /** 
  * @brief Add new members always at the front and leave the ones in the back the same
  * as the elements at the back of the layout always stay in the same position
  */
 struct persistent_storage_layout {
+	// main cow stuff storage
+	int cows_size;
+	std::array<kuh, MAX_COWS> cows;
+
+	// settings relevant things
 	static_string<64> user_pwd;
 	static_string<64> hostname;
 	static_string<64> ssid_wifi;
@@ -117,7 +132,7 @@ struct persistent_storage {
 		#pragma GCC diagnostic pop
 	}
 	template<typename M, typename T = mem_t<M>::value_t>
-	void read_array_range(M member, uint32_t start_idx, uint32_t end_idx, M::value_t* out) {
+	void read_array_range(M member, uint32_t start_idx, uint32_t end_idx, T* out) {
 		// read is a simple copy from flash memory
 		#pragma GCC diagnostic push
 		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
