@@ -78,7 +78,7 @@ void startup_task(void *) {
     cyw43_arch_enable_sta_mode();
     Webserver().start();
     LogInfo("Ready, running http at {}", ip4addr_ntoa(netif_ip4_addr(netif_list)));
-    // LogInfo("Loaded cow storage with {} cows", kuhspeicher::Default().cow_names.size());
+    LogInfo("Loaded cow storage with {} cows", kuhspeicher::Default().cow_names.size());
     LogInfo("Initialization done");
     std::cout << "Initialization done, get all further info via the commands shown in 'help'\n";
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);

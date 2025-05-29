@@ -7,6 +7,7 @@
 #include "measurements.h"
 #include "wifi_storage.h"
 #include "access_point.h"
+#include "kuhspeicher.h"
 
 // handle exactly one command from the input stream at a time (should be called in an endless loop)
 static constexpr inline void handle_usb_command(std::istream &in = std::cin, std::ostream &out = std::cout) {
@@ -47,13 +48,15 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		out << "  connect_wifi ${ssid} ${password}\n";
 		out << "    Store the wifi credentials for a certain ssid and connect if its available\n\n";
 		out << "  set_log_level (info|warning|error|fatal)\n";
-		out << "    Set the log level to the specified value\n\n";;
+		out << "    Set the log level to the specified value\n\n";
 		out << "  log\n";
 		out << "    Print the log storage to the console\n\n";
 		out << "  logs\n";
 		out << "    Print the log storage with a separator line to the console\n\n";
 		out << "  s\n";
 		out << "    Print a separator line with dashes\n\n";
+		out << "  clear_cows\n";
+		out << "    Clear all cows (sets the cows size to 0)\n\n";
 	} else if (command == "status") {
 		out << "measurements:\n";
 		out << "-------------\n";
@@ -100,6 +103,8 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		print_logs();
 	} else if (command == "s") {
 		out << "--------------------------------------\n";
+	} else if (command == "clear_cows") {
+		kuhspeicher::Default().clear();
 	} else {
 		out << "[ERROR] Command " << command << " unknown. Run command 'help' for a list of all available commands\n";
 	}

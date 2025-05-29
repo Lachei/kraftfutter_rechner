@@ -20,6 +20,7 @@
  <script>
   var p="u";
   var lo=0;
+  var accb = [];
   var m={};
   var d=document;
   var v=d.getElementById('v');
@@ -31,7 +32,7 @@
    lo=1;};
   async function li(){await fetch("login",{method:"POST"});await cu();}
   window.onresize=()=>{let x=d.getElementById(p).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x});}
-  async function cu(){try{let l=await fetch("user");let u=await l.text();if(!u||u.length===0)throw 0;lie.innerHTML=u;}catch(e){lie.innerHTML='Anmelden';};};
+  async function cu(){try{let l=await fetch("user");let u=await l.text();if(!u||u.length===0)throw 0;lie.innerHTML=u;for(let e of accb)e(true);}catch(e){lie.innerHTML='Anmelden';for(let e of accb)e(false);};};
   setTimeout(cu, 10000);
  </script>
 </body>

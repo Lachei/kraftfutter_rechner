@@ -3,17 +3,34 @@
 <head><meta charset="utf-8"></head>
 <body>
 <h3>Einstellungen</h3>
+<h4>Kuheinstellungen</h4>
+<div style="margin-left:10px">
+<div class="lo" style="color:orange">Für Kuheinstellungen bitte anmelden.</div>
+<div class="li">
+<p><input id="kn" ><label for="kn">Kuhname</label>
+<p><input id="ko" value="DE"><label for="ko">Ohrenmarkennr</label>
+<p><input id="hn" type="number"><label for="hn">Halsbandnr</label>
+<p><input id="km" type="number"><label for="km">Kraftfutter in kg</label>
+<p><input id="ab" type="date"><label for="ab">Abkalbedatum</label>
+<p><button>Kuh hinzufügen</button>
+</div>
+</div>
 <h4>Passwort ändern</h4>
+<div class="lo" style="color:orange">Für Kuheinstellungen bitte anmelden.</div>
+<div class="li">
 <p><input id="pw1" type="password"><label for="pw1">Passwort eingeben</label>
 <p><input id="pw2" type="password"><label for="pw2">Passwort wiederholen</label>
 <p><button onclick="sp();">Passwort ändern</button>
-<p><pre id="e" class="er d">Passwörter nicht gleich</pre>
+<p><pre id="e" class="er d">Passwörter nicht gleich</pre></div>
 </body>
 <script>
 var d=document;
 var pw1=d.getElementById("pw1");
 var pw2=d.getElementById("pw2");
 var e=d.getElementById("e");
+var lis=d.querySelectorAll(".li");
+var los=d.querySelectorAll(".lo");
 const sp=async()=>{if(pw1.value!=pw2.value)e.classList.remove("d");else {e.classList.add("d");await fetch("set_password",{method:"PUT",body:pw1.value});pw1.value=pw2.value="";}};
+parent.accb.push((l)=>{if(l){lis.forEach(e=>e.style.display="block");los.forEach(e=> e.style.display="none");}else{lis.forEach(e=>e.style.display="none");los.forEach(e=>e.style.display="block");};});
 </script>
 </html>

@@ -4,7 +4,7 @@
 #include "persistent_storage.h"
 #include "ranges"
 
-using kuhnamen = static_vector<decltype(kuh::name), 256>;
+using kuhnamen = static_vector<decltype(kuh::name), MAX_COWS>;
 
 // storage for in memroy storage of all cow names (used for faster readout)
 struct kuhspeicher {
@@ -15,15 +15,20 @@ struct kuhspeicher {
 			int cows_size{};
 			
 			persistent_storage_t::Default().read(&persistent_storage_layout::cows_size, cows_size);
-			for (int  i: std::ranges::iota_view(0, std::min<int>(cows_size, MAX_COWS))) {
+			for (int  i: std::ranges::iota_view(0, std::clamp<int>(cows_size, 0, MAX_COWS))) {
 				persistent_storage_t::Default().read_array_range(&persistent_storage_layout::cows, i, i + 1, &speicher.cow);
 				speicher.cow_names.push(speicher.cow.name);
 			}
-			return true;}();
+		 	return true;}();
 		return speicher;
 	}
 
 	kuh cow;
 	kuhnamen cow_names; // quick access to all names (needed for responsive web-ui)
+
+	void clear() {
+		LogInfo("Clearing cows");
+		persistent_storage_t::Default().write(0, &persistent_storage_layout::cows_size);
+	}
 };
 

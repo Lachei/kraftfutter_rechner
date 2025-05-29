@@ -5,7 +5,7 @@
 <h3>Internet Einstellungen</h3>
 <h4>Wifi einstellungen:</h4>
 <p><label for="ap">Access Point aktiviert:</label><input id="ap" type="checkbox" onchange="uap();">
-<table style="width:100%;margin-left:1em"><tr><td>Hostname:</td>
+<table style="width:100%;padding-left:1em"><tr><td>Hostname:</td>
 <td><input id="hi" type="text"></td><td><button onclick="uh();">Setzen</button></table>
 <div id="i">
 </div>
