@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html style="height:100%">
+<html style="height:100%;background:linear-gradient(-45deg,#ee7752,#e73c7e,#23a6d5,#23d5ab);">
 <head><meta charset="utf-8"><title>DcDc Umspanner</title><link rel="stylesheet" href="style">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body>
  <button id="li" style="float:right" onclick="li();">Anmelden</button>
  <h1 style="text-align:center">DcDc Umspanner</h1>
  <div style="display:grid;grid-template-columns:repeat(3, auto);background-color:#d9ffd9;border-radius:20px;">
-  <div class="t u">Übersicht</div>
+  <div class="t u  s">Übersicht</div>
   <div class="t e">Einstellungen</div>
   <div class="t i">Internet</div>
  </div>
@@ -24,7 +24,7 @@
   var d=document;
   var v=d.getElementById('v');
   var lie=d.getElementById('li');
-  for(let a of d.getElementsByClassName("t")){a.onclick=()=>{let x=d.getElementById(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"}); p=a.classList[1];if(a.classList[1] in m)m[a.classList[1]]();};};
+  for(let a of d.getElementsByClassName("t")){a.onclick=()=>{d.querySelectorAll('.s')[0].classList.remove('s');let x=d.getElementById(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"}); p=a.classList[1];if(a.classList[1] in m)m[a.classList[1]]();a.classList.add('s');};};
   function ol(){ let c = d.styleSheets[0].cssRules;
    let ct = '';[...c].forEach(r=>ct+=r.cssText);
    for (f of d.getElementsByClassName("tp"))f.contentDocument.head.innerHTML+="<style>"+ct+"</style>";
