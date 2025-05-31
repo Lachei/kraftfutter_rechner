@@ -11,13 +11,13 @@
 #include "crypto_storage.h"
 #include "kuhspeicher.h"
 
-using tcp_server_typed = tcp_server<12, 5, 2, 0>;
+using tcp_server_typed = tcp_server<13, 5, 2, 1>;
 tcp_server_typed& Webserver() {
 	// default endpoints from upstream
 	const auto static_page_callback = [] (std::string_view page, std::string_view status, std::string_view type = "text/html") {
 		return [page, status, type](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res){
 			res.res_set_status_line(HTTP_VERSION, status);
-			res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+			res.res_add_header("Server", DEFAULT_SERVER);
 			res.res_add_header("Content-Type", type);
 			res.res_add_header("Content-Length", static_format<8>("{}", page.size()));
 			res.res_write_body(page);
@@ -25,7 +25,7 @@ tcp_server_typed& Webserver() {
 	};
 	const auto fill_unauthorized = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_UNAUTHORIZED);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Server", DEFAULT_SERVER);
 		res.res_add_header("WWW-Authenticate", static_format<128>(R"(Digest algorithm="{}",nonce="{:x}",realm="{}",qop="{}")", crypto_storage::algorithm, time_us_64(), crypto_storage::realm, crypto_storage::qop));
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
@@ -37,7 +37,7 @@ tcp_server_typed& Webserver() {
 			return;
 		}
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Server", DEFAULT_SERVER);
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
 	};
@@ -48,14 +48,14 @@ tcp_server_typed& Webserver() {
 			user = crypto_storage::Default().check_authorization(req.method, auth_header);
 		}
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Server", DEFAULT_SERVER);
 		res.res_add_header("Content-Length", static_format<8>("{}", user.size()));
 		res.res_write_body(user);
 	};
 	const auto get_logs = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
-		res.res_add_header("Content-Type", "text/plain");
+		res.res_add_header("Server", DEFAULT_SERVER);
+		res.res_add_header("Content-Type", CONTENT_TEXT);
 		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
 		res.res_write_body(); // add header end sequence
 		int body_size = log_storage::Default().print_errors(res.buffer);
@@ -79,15 +79,15 @@ tcp_server_typed& Webserver() {
 		else
 			status = json_fail;
 		res.res_set_status_line(HTTP_VERSION, status == json_success ? STATUS_OK: STATUS_BAD_REQUEST);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
-		res.res_add_header("Content-Type", "application/json");
+		res.res_add_header("Server", DEFAULT_SERVER);
+		res.res_add_header("Content-Type", CONTENT_JSON);
 		res.res_add_header("Content-Length", static_format<8>("{}", status.size()));
 		res.res_write_body(status);
 	};
 	const auto get_discovered_wifis = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
-		res.res_add_header("Content-Type", "application/json");
+		res.res_add_header("Server", DEFAULT_SERVER);
+		res.res_add_header("Content-Type", CONTENT_JSON);
 		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
 		res.res_write_body("["); // add header end sequence and json object start
 		bool first_iter{true};
@@ -103,14 +103,14 @@ tcp_server_typed& Webserver() {
 	};
 	const auto get_hostname = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
-		res.res_add_header("Content-Type", "text/plain");
+		res.res_add_header("Server", DEFAULT_SERVER);
+		res.res_add_header("Content-Type", CONTENT_TEXT);
 		res.res_add_header("Content-Length", static_format<8>("{}", wifi_storage::Default().hostname.size()));
 		res.res_write_body(wifi_storage::Default().hostname.sv());
 	};
 	const auto set_hostname = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Server", DEFAULT_SERVER);
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
 		wifi_storage::Default().hostname.fill(req.body);
@@ -122,14 +122,14 @@ tcp_server_typed& Webserver() {
 	const auto get_ap_active = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		std::string_view response = access_point::Default().active ? "true": "false";
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
-		res.res_add_header("Content-Type", "text/plain");
+		res.res_add_header("Server", DEFAULT_SERVER);
+		res.res_add_header("Content-Type", CONTENT_TEXT);
 		res.res_add_header("Content-Length", static_format<8>("{}", response.size()));
 		res.res_write_body(response);
 	};
 	const auto set_ap_active = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Server", DEFAULT_SERVER);
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
 		if (req.body == "true")
@@ -139,7 +139,7 @@ tcp_server_typed& Webserver() {
 	};
 	const auto connect_to_wifi = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");;
+		res.res_add_header("Server", DEFAULT_SERVER);;
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
 		// should be in format: ${ssid} ${password}
@@ -170,7 +170,7 @@ tcp_server_typed& Webserver() {
 		}
 		crypto_storage::Default().set_password(req.body);
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Server", DEFAULT_SERVER);
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
 	};
@@ -185,7 +185,8 @@ tcp_server_typed& Webserver() {
 		}
 
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Server", DEFAULT_SERVER);
+		res.res_add_header("Content-Type", CONTENT_JSON);
 		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
 	
 		// adding the cows as a list in a json: {'cows_size':100,'cow_names':['name1','name2']}
@@ -205,6 +206,41 @@ tcp_server_typed& Webserver() {
 		res.buffer.append("]}");
 		
 		if (0 == format_to_sv(length_hdr, "{}", res.buffer.size() - start_size))
+			LogError("Failed to write header length");
+	};
+	const auto get_cow = [&fill_unauthorized](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		std::string_view auth_header = req.headers_view.get_header("Authorization");
+		if (auth_header.empty() || crypto_storage::Default().check_authorization(req.method, auth_header).empty()) {
+			fill_unauthorized(req, res);
+			return;
+		}
+
+		const kuh *cow{};
+		for (const auto& c: kuhspeicher::Default().cows_view()) {
+			if (c.name.sv() == req.body) {
+				cow = &c;
+				break;
+			}
+		}
+		
+		if (!cow) {
+			res.res_set_status_line(HTTP_VERSION, STATUS_BAD_REQUEST);
+			res.res_add_header("Server", DEFAULT_SERVER);
+			res.res_add_header("Content-Length", "0");
+			res.res_write_body();
+			return;
+		}
+		
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", DEFAULT_SERVER);
+		res.res_add_header("Content-Type", CONTENT_JSON);
+		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
+		res.res_write_body();
+		auto content_length = res.buffer.append_formatted(
+			"{{'name':'{}','ohrenmarke':'{}','halbandnr':{},'kraftfuttermenge':{},'abkalbungstag',{}}}", 
+			cow->name.sv(), array_to_sv(cow->ohrenmarke), cow->halsbandnr, cow->kraftfuttermenge, cow->abkalbungstag
+		);
+		if (0 == format_to_sv(length_hdr, "{}", content_length))
 			LogError("Failed to write header length");
 	};
 	const auto put_cow = [&fill_unauthorized](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
@@ -227,7 +263,7 @@ tcp_server_typed& Webserver() {
 		}
 
 		res.res_set_status_line(HTTP_VERSION, status);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Server", DEFAULT_SERVER);
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
 	};
@@ -241,7 +277,7 @@ tcp_server_typed& Webserver() {
 		kuhspeicher::Default().delete_cow(req.body);
 
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Server", DEFAULT_SERVER);
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
 	};
@@ -252,6 +288,7 @@ tcp_server_typed& Webserver() {
 		.get_endpoints = {
 			// kraftfutter-specific code
 			tcp_server_typed::endpoint{{.path_match = true}, "/cow_names", get_cow_names},
+			tcp_server_typed::endpoint{{.path_match = true}, "/cow_entry", get_cow},
 			// interactive endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/logs", get_logs},
 			tcp_server_typed::endpoint{{.path_match = true}, "/discovered_wifis", get_discovered_wifis},
@@ -277,7 +314,10 @@ tcp_server_typed& Webserver() {
 		.put_endpoints = {
 			tcp_server_typed::endpoint{{.path_match = true}, "/set_password", set_password},
 			tcp_server_typed::endpoint{{.path_match = true}, "/cow_entry", put_cow},
-		}
+		},
+		.delete_endpoints = {
+			tcp_server_typed::endpoint{{.path_match = true}, "/cow_entry", delete_cow},
+		},
 	};
 	return webserver;
 }

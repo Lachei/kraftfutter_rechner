@@ -50,7 +50,7 @@ struct kuhspeicher {
 			LogError("Failed to find cow {}", name);
 			return;
 		}
-		if (dst != cows.size() - 1) {
+		if (size_t(dst) != cows.size() - 1) {
 			persistent_storage_t::Default().write_array_range(&cows.back(), &persistent_storage_layout::cows, dst, dst + 1);
 		}
 		if (cows.size())

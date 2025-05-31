@@ -26,6 +26,11 @@ constexpr std::string_view STATUS_FORBIDDEN{"403 Forbidden"};
 constexpr std::string_view STATUS_NOT_FOUND{"404 Not Found"};
 constexpr std::string_view STATUS_INTERNAL_SERVER_ERROR{"500 Internal Server Error"};
 
+constexpr std::string_view DEFAULT_SERVER{"LacheiEmbed(josefstumpfegger@outlook.de)"};
+
+constexpr std::string_view CONTENT_TEXT{"text/plain"};
+constexpr std::string_view CONTENT_JSON{"application/json"};
+
 struct EndpointFlags{
 	bool path_match: 1 {true}; // path for endpoint has to match, not only 
 };
