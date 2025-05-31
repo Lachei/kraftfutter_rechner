@@ -142,11 +142,17 @@ struct persistent_storage {
 	}
 	template<typename M, typename T = mem_t<M>>
 	const T& view(M member) const {
-		return *reinterpret_cast<T*>(storage_begin + *reinterpret_cast<uintptr_t*>(&member));
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+		return *reinterpret_cast<const T*>(storage_begin + *reinterpret_cast<uintptr_t*>(&member));
+		#pragma GCC diagnostic pop
 	}
 	template<typename M, typename T = mem_t<M>::value_type>
 	std::span<T> view(M member, uint32_t start_idx, uint32_t end_idx) const {
-		return {reintpret_cast<T*>(storage_begin + *reinterpret_cast<uintptr_t*>(&member) + start_idx * sizeof(T)), end_idx - start_idx};
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+		return {(T*)(storage_begin + *reinterpret_cast<uintptr_t*>(&member) + start_idx * sizeof(T)), end_idx - start_idx};
+		#pragma GCC diagnostic pop
 	}
 
 	/*INTERNAL*/ struct _write_data {const char *src_start, *src_end; uint32_t dst_offset;}; // dst offset is the offset of the flash begin
