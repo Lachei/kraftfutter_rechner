@@ -82,7 +82,7 @@ struct persistent_storage {
 	std::array<char, MAX_WRITE_SIZE> _write_buffer{};
 
 	template<typename M>
-	using mem_t = decltype(std::declval<persistent_mem_layout>().*std::declval<M>());
+	using mem_t = std::decay_t<decltype(std::declval<persistent_mem_layout>().*std::declval<M>())>;
 
 	/** @brief To be used with member pointers: int Struct:: *member = &Struct::member_a; */
 	template<typename M, typename T = mem_t<M>> requires (std::islessequal(sizeof(T), MAX_WRITE_SIZE))
@@ -132,7 +132,7 @@ struct persistent_storage {
 		memcpy(&out, storage_begin + *reinterpret_cast<uintptr_t*>(&member), sizeof(T));
 		#pragma GCC diagnostic pop
 	}
-	template<typename M, typename T = mem_t<M>::value_t>
+	template<typename M, typename T = mem_t<M>::value_type>
 	void read_array_range(M member, uint32_t start_idx, uint32_t end_idx, T* out) const {
 		// read is a simple copy from flash memory
 		#pragma GCC diagnostic push
@@ -140,11 +140,11 @@ struct persistent_storage {
 		memcpy(out, storage_begin + *reinterpret_cast<uintptr_t*>(&member) + start_idx * sizeof(T), sizeof(T) * (end_idx - start_idx));
 		#pragma GCC diagnostic pop
 	}
-	template<typename M, typename T = mem_t<M>> requires (std::islessequal(sizeof(T), MAX_WRITE_SIZE))
+	template<typename M, typename T = mem_t<M>>
 	const T& view(M member) const {
 		return *reinterpret_cast<T*>(storage_begin + *reinterpret_cast<uintptr_t*>(&member));
 	}
-	template<typename M, typename T = mem_t<M>::value_t>
+	template<typename M, typename T = mem_t<M>::value_type>
 	std::span<T> view(M member, uint32_t start_idx, uint32_t end_idx) const {
 		return {reintpret_cast<T*>(storage_begin + *reinterpret_cast<uintptr_t*>(&member) + start_idx * sizeof(T)), end_idx - start_idx};
 	}
