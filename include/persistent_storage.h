@@ -91,7 +91,7 @@ struct persistent_storage {
 	err_t write_array_range(const T *data, M member, uint32_t start_idx, uint32_t end_idx) {
 		if (start_idx == end_idx)
 			return PICO_OK;
-		if (end_idx > member.size() || start_idx > member.size() || start_idx > end_idx) {
+		if (end_idx > view(member).size() || start_idx > view(member).size() || start_idx > end_idx) {
 			LogError("persistent_storage::write() indices out of bounds, abort.");
 			return PICO_ERROR_GENERIC;
 		}
