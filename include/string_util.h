@@ -46,3 +46,12 @@ bool extract_newline(std::string_view &content) {
 	content = content.substr(2);
 	return true;
 }
+
+constexpr void skip_whitespace(std::string_view &content) {
+	content = content.substr(std::min(content.size(), content.find_first_not_of(" \t\n\v\r\f")));
+}
+
+constexpr bool is_quote(char c) { return c == '"' || c == '\''; }
+
+template<typename T, unsigned int N>
+constexpr std::string_view array_to_sv(const std::array<T, N> &a) { return std::string_view{a.data(), sizeof(T) * N}; }

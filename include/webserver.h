@@ -9,17 +9,10 @@
 #include "access_point.h"
 #include "persistent_storage.h"
 #include "crypto_storage.h"
+#include "kuhspeicher.h"
 
-using tcp_server_typed = tcp_server<12, 5, 1, 0>;
+using tcp_server_typed = tcp_server<12, 5, 2, 0>;
 tcp_server_typed& Webserver() {
-	// custom enpoints for kraftfutter application
-	const auto get_cow_names = [](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
-		constexpr int MAX_COWS_PER_RES{tcp_server_typed::message_buffer{}.buffer.size() / kuh{}.name.storage.size()};
-		res.res_set_status_line(HTTP_VERSION, STATUS_UNAUTHORIZED);
-		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
-		
-	};
-
 	// default endpoints from upstream
 	const auto static_page_callback = [] (std::string_view page, std::string_view status, std::string_view type = "text/html") {
 		return [page, status, type](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res){
@@ -181,6 +174,78 @@ tcp_server_typed& Webserver() {
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
 	};
+
+	// custom enpoints for kraftfutter application
+	const auto get_cow_names = [&fill_unauthorized](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		constexpr int MAX_COWS_PER_RES{(tcp_server_typed::message_buffer{}.buffer.size() - 256) / kuh{}.name.storage.size()};
+		std::string_view auth_header = req.headers_view.get_header("Authorization");
+		if (auth_header.empty() || crypto_storage::Default().check_authorization(req.method, auth_header).empty()) {
+			fill_unauthorized(req, res);
+			return;
+		}
+
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
+	
+		// adding the cows as a list in a json: {'cows_size':100,'cow_names':['name1','name2']}
+		uint32_t offset = std::clamp<uint32_t>(strtoul(req.body.data(), nullptr, 10), 0, MAX_COWS_PER_RES - 1);
+		auto cows = kuhspeicher::Default().cows_view();
+		res.res_write_body();
+		auto start_size = res.buffer.size();
+		res.buffer.append_formatted("{{'cows_size':{},'cow_names':[", cows.size());
+		cows = cows.subspan(offset, MAX_COWS_PER_RES);
+		for (const auto &cow: cows) {
+			if (&cow != cows.data())
+				res.buffer.append(',');
+			res.buffer.append('\'');
+			res.buffer.append(cow.name.sv());
+			res.buffer.append('\'');
+		}
+		res.buffer.append("]}");
+		
+		if (0 == format_to_sv(length_hdr, "{}", res.buffer.size() - start_size))
+			LogError("Failed to write header length");
+	};
+	const auto put_cow = [&fill_unauthorized](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		std::string_view auth_header = req.headers_view.get_header("Authorization");
+		if (auth_header.empty() || crypto_storage::Default().check_authorization(req.method, auth_header).empty()) {
+			fill_unauthorized(req, res);
+			return;
+		}
+
+		// parsing data of the type: {'name':'a_name',}
+		std::string_view status{STATUS_OK};
+		auto cow = parse_cow_from_json(req.body);
+		if (!cow)
+			goto failure;
+		if (!kuhspeicher::Default().write_or_create_cow(cow.value()))
+			goto failure;
+			
+		if (false) {
+		failure: status = STATUS_BAD_REQUEST;
+		}
+
+		res.res_set_status_line(HTTP_VERSION, status);
+		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Content-Length", "0");
+		res.res_write_body();
+	};
+	const auto delete_cow = [&fill_unauthorized](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		std::string_view auth_header = req.headers_view.get_header("Authorization");
+		if (auth_header.empty() || crypto_storage::Default().check_authorization(req.method, auth_header).empty()) {
+			fill_unauthorized(req, res);
+			return;
+		}
+
+		kuhspeicher::Default().delete_cow(req.body);
+
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Content-Length", "0");
+		res.res_write_body();
+	};
+
 	static tcp_server_typed webserver{
 		.port = 80,
 		.default_endpoint_cb = static_page_callback(_404_HTML, STATUS_NOT_FOUND),
@@ -211,6 +276,7 @@ tcp_server_typed& Webserver() {
 		},
 		.put_endpoints = {
 			tcp_server_typed::endpoint{{.path_match = true}, "/set_password", set_password},
+			tcp_server_typed::endpoint{{.path_match = true}, "/cow_entry", put_cow},
 		}
 	};
 	return webserver;

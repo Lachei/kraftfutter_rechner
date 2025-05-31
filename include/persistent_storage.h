@@ -17,7 +17,7 @@ constexpr int MAX_COWS{256};
 struct kuh {
 	static_string<15, uint8_t> name;
 	std::array<char, 12> ohrenmarke;
-	int halbandnr;
+	int halsbandnr;
 	float kraftfuttermenge;
 	uint32_t abkalbungstag;
 	static_ring_buffer<uint32_t, 117> letze_fuetterungen;
