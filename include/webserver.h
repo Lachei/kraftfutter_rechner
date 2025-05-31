@@ -10,8 +10,17 @@
 #include "persistent_storage.h"
 #include "crypto_storage.h"
 
-using tcp_server_typed = tcp_server<11, 5, 1, 0>;
+using tcp_server_typed = tcp_server<12, 5, 1, 0>;
 tcp_server_typed& Webserver() {
+	// custom enpoints for kraftfutter application
+	const auto get_cow_names = [](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		constexpr int MAX_COWS_PER_RES{tcp_server_typed::message_buffer{}.buffer.size() / kuh{}.name.storage.size()};
+		res.res_set_status_line(HTTP_VERSION, STATUS_UNAUTHORIZED);
+		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		
+	};
+
+	// default endpoints from upstream
 	const auto static_page_callback = [] (std::string_view page, std::string_view status, std::string_view type = "text/html") {
 		return [page, status, type](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res){
 			res.res_set_status_line(HTTP_VERSION, status);
@@ -176,6 +185,8 @@ tcp_server_typed& Webserver() {
 		.port = 80,
 		.default_endpoint_cb = static_page_callback(_404_HTML, STATUS_NOT_FOUND),
 		.get_endpoints = {
+			// kraftfutter-specific code
+			tcp_server_typed::endpoint{{.path_match = true}, "/cow_names", get_cow_names},
 			// interactive endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/logs", get_logs},
 			tcp_server_typed::endpoint{{.path_match = true}, "/discovered_wifis", get_discovered_wifis},
