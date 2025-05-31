@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <span>
 
 #include "pico/flash.h"
 #include "pico/stdlib.h"
@@ -109,7 +110,7 @@ struct persistent_storage {
 		return _write_impl(start_idx_paged, start_idx_data, end_idx_data, end_idx_paged);
 	}
 	template<typename M, typename T = mem_t<M>> requires (std::islessequal(sizeof(T), MAX_WRITE_SIZE))
-	void read(M member, T& out) {
+	void read(M member, T& out) const {
 		// read is a simple copy from flash memory
 		#pragma GCC diagnostic push
 		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
@@ -117,12 +118,20 @@ struct persistent_storage {
 		#pragma GCC diagnostic pop
 	}
 	template<typename M, typename T = mem_t<M>::value_t>
-	void read_array_range(M member, uint32_t start_idx, uint32_t end_idx, M::value_t* out) {
+	void read_array_range(M member, uint32_t start_idx, uint32_t end_idx, M::value_t* out) const {
 		// read is a simple copy from flash memory
 		#pragma GCC diagnostic push
 		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 		memcpy(out, storage_begin + *reinterpret_cast<uintptr_t*>(&member) + start_idx * sizeof(T), sizeof(T) * (end_idx - start_idx));
 		#pragma GCC diagnostic pop
+	}
+	template<typename M, typename T = mem_t<M>> requires (std::islessequal(sizeof(T), MAX_WRITE_SIZE))
+	const T& view(M member) const {
+		return *reinterpret_cast<T*>(storage_begin + *reinterpret_cast<uintptr_t*>(&member));
+	}
+	template<typename M, typename T = mem_t<M>::value_t>
+	std::span<T> view(M member, uint32_t start_idx, uint32_t end_idx) const {
+		return {reintpret_cast<T*>(storage_begin + *reinterpret_cast<uintptr_t*>(&member) + start_idx * sizeof(T)), end_idx - start_idx};
 	}
 
 	/*INTERNAL*/ struct _write_data {const char *src_start, *src_end; uint32_t dst_offset;}; // dst offset is the offset of the flash begin
