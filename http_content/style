@@ -21,4 +21,5 @@ details{padding:10px;border-radius:20px;border:1px solid black;cursor:pointer;ma
 .er{color:red;font-weight:bold;}
 .lo{display:box;}
 .li{display:none;}
+.fr{float:right;}
 

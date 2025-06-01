@@ -2,6 +2,7 @@ import argparse
 import http.server
 import socketserver
 import os
+import json
 
 parser = argparse.ArgumentParser(
                     prog='TestIotServer',
@@ -15,6 +16,8 @@ log_counter = 0
 login_counter = 0
 hostname = "A beatiful thing"
 ap_active = "true"
+cows = {'Gerta':{'ohrenmarke':'DEGerta','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':111}, 
+        'Biene':{'ohrenmarke':'DEBiene','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':111}}
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -34,6 +37,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         global login_counter
         global hostname
         global ap_active
+        global cows
         if self.path == '/logs':
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
@@ -61,6 +65,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(f"Du {login_counter}".encode())
             log_counter += 1
+        elif self.path == '/cow_names':
+            res = {'cows_size':len(cows), 'cow_names':[]}
+            for cow in cows:
+                res['cow_names'].append(cow)
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            print(json.dumps(res))
+            self.wfile.write(json.dumps(res).encode())
+        elif self.path.startswith('/cow_entry/'):
+            cow = self.path.split('/')[-1]
+            if cow not in cows:
+                print("Could not find cow: " + cow)
+                self.send_response(400)
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.wfile.write(json.dumps(cows[cow]).encode())
         else:
             super().do_GET()
 
@@ -109,6 +132,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         else:
             super().do_PUT()
 
+    def do_DELETE(self):
+        if self.path == '/delete_cow':
+            print("Delete called")
+            self.send_response(200)
+            self.end_headers()
+        else:
+            super().do_DELETE()
+
+socketserver.TCPServer.allow_reuse_address = True
 with socketserver.TCPServer(("", args.port), Handler) as httpd:
     print("serving at port", args.port)
     try:

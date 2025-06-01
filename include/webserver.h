@@ -215,9 +215,10 @@ tcp_server_typed& Webserver() {
 			return;
 		}
 
+		std::string_view req_cow = req.path.substr(req.path.find_last_of('/') + 1);
 		const kuh *cow{};
 		for (const auto& c: kuhspeicher::Default().cows_view()) {
-			if (c.name.sv() == req.body) {
+			if (c.name.sv() == req_cow) {
 				cow = &c;
 				break;
 			}
@@ -237,7 +238,7 @@ tcp_server_typed& Webserver() {
 		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
 		res.res_write_body();
 		auto content_length = res.buffer.append_formatted(
-			"{{'name':'{}','ohrenmarke':'{}','halbandnr':{},'kraftfuttermenge':{},'abkalbungstag',{}}}", 
+			"{{'name':'{}','ohrenmarke':'{}','halsbandnr':{},'kraftfuttermenge':{},'abkalbungstag',{}}}", 
 			cow->name.sv(), array_to_sv(cow->ohrenmarke), cow->halsbandnr, cow->kraftfuttermenge, cow->abkalbungstag
 		);
 		if (0 == format_to_sv(length_hdr, "{}", content_length))
@@ -288,7 +289,7 @@ tcp_server_typed& Webserver() {
 		.get_endpoints = {
 			// kraftfutter-specific code
 			tcp_server_typed::endpoint{{.path_match = true}, "/cow_names", get_cow_names},
-			tcp_server_typed::endpoint{{.path_match = true}, "/cow_entry", get_cow},
+			tcp_server_typed::endpoint{{.path_match = false}, "/cow_entry/", get_cow},
 			// interactive endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/logs", get_logs},
 			tcp_server_typed::endpoint{{.path_match = true}, "/discovered_wifis", get_discovered_wifis},
