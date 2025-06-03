@@ -19,7 +19,7 @@ details{padding:10px;border-radius:20px;border:1px solid black;cursor:pointer;ma
 .d{display:none;}
 .c{background:green;margin-left:10px;padding:.3em;border-radius:4px;}
 .er{color:red;font-weight:bold;}
-.lo{display:box;}
+.lo{display:box;color:red;}
 .li{display:none;}
 .fr{float:right;}
 

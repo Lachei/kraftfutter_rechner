@@ -35,6 +35,7 @@ struct kuhspeicher {
 			dst = s;
 		}
 		persistent_storage_t::Default().write_array_range(&cow, &persistent_storage_layout::cows, dst, dst + 1);
+		LogInfo("Cow {} written", cow.name.sv());
 		return true;
 	}
 	void delete_cow(std::string_view name) {
@@ -62,8 +63,8 @@ struct kuhspeicher {
 constexpr std::optional<std::string_view> parse_remove_json_string(std::string_view &json) {
 	skip_whitespace(json);
 	ASSERT(json.size() && is_quote(json[0]), "Missing start quote string");
-	auto end = std::min(json.find_first_of("\"'"), json.size());
-	std::string_view s = json.substr(0, end);
+	auto end = std::min(json.find_first_of("\"'", 1), json.size());
+	std::string_view s = json.substr(1, end - 1);
 	json = json.substr(end);
 	ASSERT(json.size() && is_quote(json[0]), "Missing end quote for string");
 	json = json.substr(1);
@@ -86,6 +87,8 @@ constexpr std::optional<kuh> parse_cow_from_json(std::string_view json) {
 	for(int i = 0; i < 56 && json.size(); ++i) {
 		auto key = parse_remove_json_string(json);
 		ASSERT(key, "Error parsing the key");
+		ASSERT(json.size() && json[0] == ':', "Invalid json, missing ':' after key");
+		json = json.substr(1);
 		if (key == "name") {
 			auto name = parse_remove_json_string(json);
 			ASSERT(name, "Error parsing the cow name");
@@ -108,7 +111,7 @@ constexpr std::optional<kuh> parse_cow_from_json(std::string_view json) {
 			ASSERT(abkalbungstag, "Failed parsing abkalbungstag");
 			cow.abkalbungstag = abkalbungstag.value();
 		} else {
-			LogError("{} is an invalid key", key.value());
+			LogError("Invalid key {}", key.value());
 			return {};
 		}
 		ASSERT(json.size(), "Invalid json, missing character after value");

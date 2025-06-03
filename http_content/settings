@@ -5,19 +5,19 @@
 <h3>Einstellungen</h3>
 <h4>Kuheinstellungen</h4>
 <div style="margin-left:10px">
-<div class="lo" style="color:orange">Für Kuheinstellungen bitte anmelden.</div>
+<div class="lo">Für Kuheinstellungen bitte anmelden.</div>
 <div class="li">
 <p><input id="kn" ><label for="kn">Kuhname</label>
 <p><input id="ko" value="DE"><label for="ko">Ohrenmarkennr</label>
 <p><input id="hn" type="number"><label for="hn">Halsbandnr</label>
 <p><input id="km" type="number"><label for="km">Kraftfutter in kg</label>
 <p><input id="ab" type="date"><label for="ab">Abkalbedatum</label>
-<p><button>Kuh hinzufügen/aktualisieren</button>
-<details ontoggle="kl(this)"><summary>Kuhliste</summary></details>
+<p><button onclick="uc();">Kuh hinzufügen/aktualisieren</button>
+<details id="kli" ontoggle="kl(this)"><summary>Kuhliste</summary></details>
 </div>
 </div>
 <h4>Passwort ändern</h4>
-<div class="lo" style="color:orange">Für Kuheinstellungen bitte anmelden.</div>
+<div class="lo"><p>Für Passworteinstellungen bitte anmelden.</div>
 <div class="li">
 <p><input id="pw1" type="password"><label for="pw1">Passwort eingeben</label>
 <p><input id="pw2" type="password"><label for="pw2">Passwort wiederholen</label>
@@ -25,14 +25,24 @@
 <p><pre id="e" class="er d">Passwörter nicht gleich</pre></div>
 </body>
 <script>
-var d=document;
-var pw1=d.getElementById("pw1");
-var pw2=d.getElementById("pw2");
-var e=d.getElementById("e");
-var lis=d.querySelectorAll(".li");
-var los=d.querySelectorAll(".lo");
+function de(e){return document.getElementById(e);}
+function qa(e){return document.querySelectorAll(e);}
+var kli=de("kli");
+var kn=de("kn");
+var ko=de("ko");
+var hn=de("hn");
+var km=de("km");
+var ab=de("ab");
+var pw1=de("pw1");
+var pw2=de("pw2");
+var e=de("e");
+var lis=qa(".li");
+var los=qa(".lo");
+async function uc(){let c={name:kn.value,ohrenmarke:ko.value.padEnd(12,'0'),halsbandnr:Number(hn.value),kraftfuttermenge:Number(km.value),abkalbungstag:22};
+await fetch("cow_entry",{method:"PUT",body:JSON.stringify(c)});kli.innerHTML=ac(kli.innerHTML,c.name);s(kli);}
 async function sp(){if(pw1.value!=pw2.value)e.classList.remove("d");else {e.classList.add("d");await fetch("set_password",{method:"PUT",body:pw1.value});pw1.value=pw2.value="";}};
 parent.accb.push((l)=>{if(l){lis.forEach(e=>e.style.display="block");los.forEach(e=> e.style.display="none");}else{lis.forEach(e=>e.style.display="none");los.forEach(e=>e.style.display="block");};});
+function ac(s,c){return s+"<details id='"+c+"' ontoggle='kd(this);'><summary>"+c+"<href class='fr er' onclick='dp(\""+c+"\",event);'>&#128465;</href></summary></details>";}
 async function kl(o){
 let op=o.hasAttribute("open");
 	let cs=1;
@@ -44,7 +54,7 @@ let op=o.hasAttribute("open");
 		cs=cl.cows_size;
 		t="";
 		for (let c of cl.cow_names)
-			t+="<details ontoggle='kd(this);'><summary>"+c+"<href class='fr er' onclick='dp(\""+c+"\");'>&#128465;</href></summary></details>";
+			t=ac(t,c);
 		o.innerHTML+=t;
 		s(o);
 	}
@@ -60,8 +70,9 @@ let n=o.firstChild.innerHTML.split('<')[0];
 async function s(e){
 	Array.prototype.slice.call(e.children).map(x=>e.removeChild(x)).sort((x,y)=>x.name<y.name?-1:1).forEach(x=>e.appendChild(x));
 }
-async function dp(c){
-	if(confirm("Do you really want to delete "+c))await fetch("delete_cow",{method:"DELETE",body:c});
+async function dp(c, e){
+	e.preventDefault();
+	if(confirm("Do you really want to delete "+c)){await fetch("cow_entry",{method:"DELETE",body:c});de(c).remove();};
 };
 </script>
 </html>

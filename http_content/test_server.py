@@ -129,11 +129,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             content_len = int(self.headers.get('content-length', 0))
             pwd = self.rfile.read(content_len).decode()
             print('Set password to:', pwd)
+        elif self.path == '/cow_entry':
+            self.send_response(200)
+            self.end_headers()
         else:
             super().do_PUT()
 
     def do_DELETE(self):
-        if self.path == '/delete_cow':
+        if self.path == '/cow_entry':
             print("Delete called")
             self.send_response(200)
             self.end_headers()

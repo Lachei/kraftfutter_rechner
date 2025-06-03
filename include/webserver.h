@@ -192,20 +192,19 @@ tcp_server_typed& Webserver() {
 		// adding the cows as a list in a json: {'cows_size':100,'cow_names':['name1','name2']}
 		uint32_t offset = std::clamp<uint32_t>(strtoul(req.body.data(), nullptr, 10), 0, MAX_COWS_PER_RES - 1);
 		auto cows = kuhspeicher::Default().cows_view();
-		res.res_write_body();
-		auto start_size = res.buffer.size();
-		res.buffer.append_formatted("{{'cows_size':{},'cow_names':[", cows.size());
-		cows = cows.subspan(offset, MAX_COWS_PER_RES);
+		res.res_write_body("{");
+		res.buffer.append_formatted(R"("cows_size":{},"cow_names":[)", cows.size());
+		cows = cows.subspan(offset, std::min<int>(cows.size() - offset, MAX_COWS_PER_RES));
 		for (const auto &cow: cows) {
 			if (&cow != cows.data())
 				res.buffer.append(',');
-			res.buffer.append('\'');
+			res.buffer.append('"');
 			res.buffer.append(cow.name.sv());
-			res.buffer.append('\'');
+			res.buffer.append('"');
 		}
-		res.buffer.append("]}");
+		res.res_write_body("]}");
 		
-		if (0 == format_to_sv(length_hdr, "{}", res.buffer.size() - start_size))
+		if (0 == format_to_sv(length_hdr, "{}", res.body.size()))
 			LogError("Failed to write header length");
 	};
 	const auto get_cow = [&fill_unauthorized](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
@@ -238,7 +237,7 @@ tcp_server_typed& Webserver() {
 		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
 		res.res_write_body();
 		auto content_length = res.buffer.append_formatted(
-			"{{'name':'{}','ohrenmarke':'{}','halsbandnr':{},'kraftfuttermenge':{},'abkalbungstag',{}}}", 
+			R"({{"name":"{}","ohrenmarke":"{}","halsbandnr":{},"kraftfuttermenge":{},"abkalbungstag":{}}})", 
 			cow->name.sv(), array_to_sv(cow->ohrenmarke), cow->halsbandnr, cow->kraftfuttermenge, cow->abkalbungstag
 		);
 		if (0 == format_to_sv(length_hdr, "{}", content_length))
