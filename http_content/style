@@ -22,4 +22,5 @@ details{padding:10px;border-radius:20px;border:1px solid black;cursor:pointer;ma
 .lo{display:box;color:red;}
 .li{display:none;}
 .fr{float:right;}
+.cs{background-color:#fff6;margin:.5rem;padding:.2rem;}
 

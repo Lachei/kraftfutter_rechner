@@ -16,8 +16,8 @@ log_counter = 0
 login_counter = 0
 hostname = "A beatiful thing"
 ap_active = "true"
-cows = {'Gerta':{'ohrenmarke':'DEGerta','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':111}, 
-        'Biene':{'ohrenmarke':'DEBiene','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':111}}
+cows = {'Gerta':{'name':'Gerta','ohrenmarke':'DEGerta','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':111}, 
+        'Biene':{'name':'Biene','ohrenmarke':'DEBiene','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':111}}
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
