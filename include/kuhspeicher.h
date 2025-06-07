@@ -4,12 +4,36 @@
 #include "persistent_storage.h"
 #include "ranges"
 
+#define ASSERT(x, message) if (!(x)) {LogError(message); return {}; }
+constexpr std::optional<std::string_view> parse_remove_json_string(std::string_view &json) {
+	skip_whitespace(json);
+	ASSERT(json.size() && is_quote(json[0]), "Missing start quote string");
+	auto end = std::min(json.find_first_of("\"'", 1), json.size());
+	std::string_view s = json.substr(1, end - 1);
+	json = json.substr(end);
+	ASSERT(json.size() && is_quote(json[0]), "Missing end quote for string");
+	json = json.substr(1);
+	skip_whitespace(json);
+	return s;
+};
+constexpr std::optional<double> parse_remove_json_double(std::string_view &json) {
+	skip_whitespace(json);
+	ASSERT(json.size(), "No number here");
+	char* end = (char*)json.end();
+	double d = std::strtod(json.data(), &end);
+	json = json.substr(end - json.data());
+	ASSERT(json.size(), "Missing cahracter after number");
+	return d;
+};
+
 struct kuhspeicher {
 	using iota = std::ranges::iota_view<size_t, size_t>;
 	static kuhspeicher& Default() {
 		static kuhspeicher speicher{};
 		return speicher;
 	}
+
+	kuh cow{};
 
 	void clear() {
 		LogInfo("Clearing cows");
@@ -57,76 +81,53 @@ struct kuhspeicher {
 		if (cows.size())
 			persistent_storage_t::Default().write(cows.size() - 1, &persistent_storage_layout::cows_size);
 	}
-};
-
-#define ASSERT(x, message) if (!(x)) {LogError(message); return {}; }
-constexpr std::optional<std::string_view> parse_remove_json_string(std::string_view &json) {
-	skip_whitespace(json);
-	ASSERT(json.size() && is_quote(json[0]), "Missing start quote string");
-	auto end = std::min(json.find_first_of("\"'", 1), json.size());
-	std::string_view s = json.substr(1, end - 1);
-	json = json.substr(end);
-	ASSERT(json.size() && is_quote(json[0]), "Missing end quote for string");
-	json = json.substr(1);
-	skip_whitespace(json);
-	return s;
-};
-constexpr std::optional<double> parse_remove_json_double(std::string_view &json) {
-	skip_whitespace(json);
-	ASSERT(json.size(), "No number here");
-	char* end = (char*)json.end();
-	double d = std::strtod(json.data(), &end);
-	json = json.substr(end - json.data());
-	ASSERT(json.size(), "Missing cahracter after number");
-	return d;
-};
-constexpr std::optional<kuh> parse_cow_from_json(std::string_view json) {
-	ASSERT(json.size() && json[0] == '{', "Invalid json");
-	json = json.substr(1);
-	kuh cow{};
-	for(int i = 0; i < 56 && json.size(); ++i) {
-		auto key = parse_remove_json_string(json);
-		ASSERT(key, "Error parsing the key");
-		ASSERT(json.size() && json[0] == ':', "Invalid json, missing ':' after key");
+	kuh* parse_cow_from_json(std::string_view json) {
+		ASSERT(json.size() && json[0] == '{', "Invalid json");
 		json = json.substr(1);
-		if (key == "name") {
-			auto name = parse_remove_json_string(json);
-			ASSERT(name, "Error parsing the cow name");
-			cow.name.fill(name.value());
-		} else if (key == "ohrenmarke") {
-			auto id = parse_remove_json_string(json);
-			ASSERT(id, "Error parsing ohrenmarke");
-			ASSERT(id.value().size() == 12, "Ohrenmarke must have 12 digits");
-			id.value().copy(cow.ohrenmarke.data(), 12);
-		} else if (key == "halsbandnr") {
-			auto halsband = parse_remove_json_double(json);
-			ASSERT(halsband, "Failed parsing halband");
-			cow.halsbandnr = static_cast<int>(halsband.value());
-		} else if (key == "kraftfuttermenge") {
-			auto kraftfutter = parse_remove_json_double(json);
-			ASSERT(kraftfutter, "Failed parsing kraftfutter menge");
-			cow.kraftfuttermenge = static_cast<int>(kraftfutter.value());
-		} else if (key == "abkalbungstag") {
-			auto abkalbungstag = parse_remove_json_double(json);
-			ASSERT(abkalbungstag, "Failed parsing abkalbungstag");
-			cow.abkalbungstag = abkalbungstag.value();
-		} else {
-			LogError("Invalid key {}", key.value());
-			return {};
+		for(int i = 0; i < 56 && json.size(); ++i) {
+			auto key = parse_remove_json_string(json);
+			ASSERT(key, "Error parsing the key");
+			ASSERT(json.size() && json[0] == ':', "Invalid json, missing ':' after key");
+			json = json.substr(1);
+			if (key == "name") {
+				auto name = parse_remove_json_string(json);
+				ASSERT(name, "Error parsing the cow name");
+				cow.name.fill(name.value());
+			} else if (key == "ohrenmarke") {
+				auto id = parse_remove_json_string(json);
+				ASSERT(id, "Error parsing ohrenmarke");
+				ASSERT(id.value().size() == 12, "Ohrenmarke must have 12 digits");
+				id.value().copy(cow.ohrenmarke.data(), 12);
+			} else if (key == "halsbandnr") {
+				auto halsband = parse_remove_json_double(json);
+				ASSERT(halsband, "Failed parsing halband");
+				cow.halsbandnr = static_cast<int>(halsband.value());
+			} else if (key == "kraftfuttermenge") {
+				auto kraftfutter = parse_remove_json_double(json);
+				ASSERT(kraftfutter, "Failed parsing kraftfutter menge");
+				cow.kraftfuttermenge = static_cast<int>(kraftfutter.value());
+			} else if (key == "abkalbungstag") {
+				auto abkalbungstag = parse_remove_json_double(json);
+				ASSERT(abkalbungstag, "Failed parsing abkalbungstag");
+				cow.abkalbungstag = abkalbungstag.value();
+			} else {
+				LogError("Invalid key {}", key.value());
+				return {};
+			}
+			ASSERT(json.size(), "Invalid json, missing character after value");
+			if (json[0] == '}')
+				break;
+			ASSERT(json[0] == ',', "Invalid json, expected ',' after value");
+			json = json.substr(1);
 		}
-		ASSERT(json.size(), "Invalid json, missing character after value");
-		if (json[0] == '}')
-			break;
-		ASSERT(json[0] == ',', "Invalid json, expected ',' after value");
-		json = json.substr(1);
+		// checking for valid cow info
+		ASSERT(cow.name.size(), "Missing cow name");
+		ASSERT(cow.ohrenmarke[0] != 0, "Ohrenmarke not set");
+		ASSERT(cow.halsbandnr != 0, "Halsbandnr is 0");
+		ASSERT(cow.kraftfuttermenge != 0, "Kraftfuttermenge is 0");
+		ASSERT(cow.abkalbungstag != 0, "Abkalbungstag is 0");
+		return &cow;
 	}
-	// checking for valid cow info
-	ASSERT(cow.name.size(), "Missing cow name");
-	ASSERT(cow.ohrenmarke[0] != 0, "Ohrenmarke not set");
-	ASSERT(cow.halsbandnr != 0, "Halsbandnr is 0");
-	ASSERT(cow.kraftfuttermenge != 0, "Kraftfuttermenge is 0");
-	ASSERT(cow.abkalbungstag != 0, "Abkalbungstag is 0");
-	return {std::move(cow)};
 };
 #undef ASSERT
 

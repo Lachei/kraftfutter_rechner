@@ -252,10 +252,10 @@ tcp_server_typed& Webserver() {
 
 		// parsing data of the type: {'name':'a_name',}
 		std::string_view status{STATUS_OK};
-		auto cow = parse_cow_from_json(req.body);
+		kuh* cow = kuhspeicher::Default().parse_cow_from_json(req.body);
 		if (!cow)
 			goto failure;
-		if (!kuhspeicher::Default().write_or_create_cow(cow.value()))
+		if (!kuhspeicher::Default().write_or_create_cow(*cow))
 			goto failure;
 			
 		if (false) {
