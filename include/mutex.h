@@ -6,7 +6,7 @@
 
 struct mutex {
 	SemaphoreHandle_t handle{};
-	mutex(): handle{xSemaphoreCreateBinary()} { if (!handle || pdTRUE != xSemaphoreGive(handle)) LogError("Failed creating the semaphore"); LogInfo("Created log mutex");}
+	mutex(): handle{xSemaphoreCreateBinary()} { if (!handle || pdTRUE != xSemaphoreGive(handle)) LogError("Failed creating the semaphore"); }
 	~mutex() {
 		if (handle) {
 			xSemaphoreGive(handle); // safety give to unblock waiting thread
@@ -22,8 +22,7 @@ struct scoped_lock {
 			LogError("Failed to lock mutex");
 			handle = NULL;
 		}
-		LogInfo("Locked mutex");
 	}
-	~scoped_lock() { if (handle) xSemaphoreGive(handle); LogInfo("Unlocked mutex"); }
+	~scoped_lock() { if (handle) xSemaphoreGive(handle); }
 };
 

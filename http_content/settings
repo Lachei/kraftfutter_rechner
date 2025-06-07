@@ -43,8 +43,8 @@ async function kl(o){let op=o.hasAttribute("open"),cs=1;
 		for (let c of cl.cow_names)
 			t=ac(t,c);
 		o.innerHTML+=t;
-		s(o);
 	}
+	s(o);
 	o.ontoggle=()=>{};
 }
 function tr(a,b){return "<tr><td>"+a+"</tc><td>:"+b+"</td></tr>";}
@@ -54,7 +54,7 @@ let n=o.firstChild.innerHTML.split('<')[0],t=await fetch("cow_entry/"+n);t=await
 	o.ontoggle=()=>{};
 }
 async function s(e){
-	Array.prototype.slice.call(e.children).map(x=>e.removeChild(x)).sort((x,y)=>x.name<y.name?-1:1).forEach(x=>e.appendChild(x));
+	Array.prototype.slice.call(e.children).map(x=>e.removeChild(x)).sort((x,y)=>x.id<y.id?-1:1).forEach(x=>e.appendChild(x));
 }
 async function dp(c, e){
 	e.preventDefault();

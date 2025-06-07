@@ -4,16 +4,18 @@
  <body>
   <h3>Messwerte:</h3>
   <h3>Logs:</h3>
+  <details id="dl" ontoggle="f();"><summary>Show logs</summary>
   <select onchange="sl();" id="ll">Log level <option>Info</option><option>Warning</option><option>Error</option><option>Fatal</option></select>
   <label for="ll">Log level setzen</label><p>
-  <pre id="l"></pre>
+  <pre id="l"></pre></details>
  </body>
  <script>
  var d=document;
+ var dl=d.getElementById("dl");
  var l=d.getElementById("l");
  var ll=d.getElementById("ll");
  const f=async ()=>{
-  if(parent.p!="u"||!parent.lo)return;
+  if(parent.p!="u"||!parent.lo)return;if(!dl.hasAttribute("open"))return;
   let logs=await fetch("logs", {signal: AbortSignal.timeout(500)});
   let t=await logs.text();
   l.innerHTML=t.replace(/(?:\r\n|\r|\n)/g, '<br>');
