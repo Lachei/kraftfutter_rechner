@@ -25,27 +25,14 @@
 <p><pre id="e" class="er d">Passwörter nicht gleich</pre></div>
 </body>
 <script>
-function de(e){return document.getElementById(e);}
-function qa(e){return document.querySelectorAll(e);}
-var kli=de("kli");
-var kn=de("kn");
-var ko=de("ko");
-var hn=de("hn");
-var km=de("km");
-var ab=de("ab");
-var pw1=de("pw1");
-var pw2=de("pw2");
-var e=de("e");
-var lis=qa(".li");
-var los=qa(".lo");
+function de(e){return document.getElementById(e);}function qa(e){return document.querySelectorAll(e);}
+var kli=de("kli"),kn=de("kn"),ko=de("ko"),hn=de("hn"),km=de("km"),ab=de("ab"),pw1=de("pw1"),pw2=de("pw2"),e=de("e"),lis=qa(".li"),los=qa(".lo");
 async function uc(){let c={name:kn.value,ohrenmarke:ko.value.padEnd(12,'0'),halsbandnr:Number(hn.value),kraftfuttermenge:Number(km.value),abkalbungstag:22};
 await fetch("cow_entry",{method:"PUT",body:JSON.stringify(c)});let o=de(c.name);if(o)o.remove();kli.innerHTML=ac(kli.innerHTML,c.name);s(kli);}
 async function sp(){if(pw1.value!=pw2.value)e.classList.remove("d");else {e.classList.add("d");await fetch("set_password",{method:"PUT",body:pw1.value});pw1.value=pw2.value="";}};
 parent.accb.push((l)=>{if(l){lis.forEach(e=>e.style.display="block");los.forEach(e=> e.style.display="none");}else{lis.forEach(e=>e.style.display="none");los.forEach(e=>e.style.display="block");};});
 function ac(s,c){return s+"<details id='"+c+"' ontoggle='kd(this);'><summary>"+c+"<href class='fr er' onclick='dp(\""+c+"\",event);'>&#128465;</href></summary></details>";}
-async function kl(o){
-let op=o.hasAttribute("open");
-	let cs=1;
+async function kl(o){let op=o.hasAttribute("open"),cs=1;
 	for(let cc=0;cc<cs;){
 		let cl=await fetch("cow_names");
 		cl=await cl.json();
@@ -62,10 +49,8 @@ let op=o.hasAttribute("open");
 }
 function tr(a,b){return "<tr><td>"+a+"</tc><td>:"+b+"</td></tr>";}
 async function kd(o){
-let n=o.firstChild.innerHTML.split('<')[0];
-	let t=await fetch("cow_entry/"+n);
-	t=await t.json();
-	o.innerHTML+="<table class='cs'>"+tr("Kuhname",t.name)+tr("Ohrenmarkennr",t.ohrenmarke)+tr("Halsbandnr",t.halsbandnr)+tr("Kraftfutter in kg",t.kraftfuttermenge)+tr("Abkalbedatum",t.abkalbungstag)+"</table><button onclick='kn.value=\""+t.name+"\";ko.value=\""+t.ohrenmarke+"\";hn.value="+t.halsbandnr+";km.value="+t.kraftfuttermenge+";ab.value="+t.abkalbungstag+"'>Editieren</button>";
+let n=o.firstChild.innerHTML.split('<')[0],t=await fetch("cow_entry/"+n);t=await t.json();
+	o.innerHTML+="<table class='cs'>"+tr("Kuhname",t.name)+tr("Ohrenmarkennr",t.ohrenmarke)+tr("Halsbandnr",t.halsbandnr)+tr("Kraftfutter in kg",t.kraftfuttermenge)+tr("Abkalbedatum",t.abkalbungstag)+"</table><button onclick='kn.value=\""+t.name+"\";ko.value=\""+t.ohrenmarke+"\";hn.value="+t.halsbandnr+";km.value="+t.kraftfuttermenge+";ab.value="+t.abkalbungstag+";this.parentNode.removeAttribute(\"open\");window.scrollTo(0,0)'>Editieren</button>";
 	o.ontoggle=()=>{};
 }
 async function s(e){

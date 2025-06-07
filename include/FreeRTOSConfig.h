@@ -48,8 +48,8 @@
 #define configCPU_CLOCK_HZ                      125000000/* Looking at runtime.c in the RPI 2040 SDK, the sys clock frequency is 125MHz */
 #define configSYSTICK_CLOCK_HZ                  1000000  /* This is always 1MHz on ARM I think.... */
 #define configTICK_RATE_HZ                      ( ( TickType_t ) 1000 )
-#define configMAX_PRIORITIES                    32
-#define configMINIMAL_STACK_SIZE                ( configSTACK_DEPTH_TYPE ) 2048
+#define configMAX_PRIORITIES                    64
+#define configMINIMAL_STACK_SIZE                ( configSTACK_DEPTH_TYPE ) 4096
 #define configUSE_16_BIT_TICKS                  0
 
 #define configIDLE_SHOULD_YIELD                 1
@@ -74,7 +74,7 @@
 /* Memory allocation related definitions. */
 #define configSUPPORT_STATIC_ALLOCATION         0
 #define configSUPPORT_DYNAMIC_ALLOCATION        1
-#define configTOTAL_HEAP_SIZE                   (56 * ( configMINIMAL_STACK_SIZE )) // heap size enough for 16 min stacks/tasks
+#define configTOTAL_HEAP_SIZE                   (24 * ( configMINIMAL_STACK_SIZE )) // heap size enough for 16 min stacks/tasks
 #define configAPPLICATION_ALLOCATED_HEAP        0
 
 /* Hook function related definitions. */
@@ -94,8 +94,8 @@
 /* Software timer related definitions. */
 #define configUSE_TIMERS                        1
 #define configTIMER_TASK_PRIORITY               ( configMAX_PRIORITIES - 1 )
-#define configTIMER_QUEUE_LENGTH                10
-#define configTIMER_TASK_STACK_DEPTH            1024
+#define configTIMER_QUEUE_LENGTH                20
+#define configTIMER_TASK_STACK_DEPTH            2048
 
 /* Interrupt nesting behaviour configuration. */
 /*

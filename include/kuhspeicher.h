@@ -22,7 +22,7 @@ struct kuhspeicher {
 		auto cows_span = cows_view();
 		int dst{-1};
 		for (int i: iota{0, cows_span.size()}) {
-			if (cows_span[i].ohrenmarke == cow.ohrenmarke) {
+			if (cows_span[i].name.sv() == cow.name.sv()) {
 				dst = i;
 				break;
 			}
