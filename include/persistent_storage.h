@@ -67,7 +67,7 @@ static char *flash_begin{reinterpret_cast<char*>(uintptr_t(XIP_BASE))};
  * persistent_storage_t::Default().read(&layout::storage_b, mem_b);
  */
 
-template<typename persistent_mem_layout, int MAX_WRITE_SIZE = FLASH_PAGE_SIZE * 8>
+template<typename persistent_mem_layout, int MAX_WRITE_SIZE = FLASH_SECTOR_SIZE>
 struct persistent_storage {
 	static constexpr uint32_t begin_offset{FLASH_SIZE - sizeof(persistent_mem_layout)}; // flash page alignment is done only when writing
 	const char *storage_begin{flash_begin + begin_offset};
@@ -90,13 +90,14 @@ struct persistent_storage {
 		#pragma GCC diagnostic push
 		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 		uint32_t start_idx_data = begin_offset + *reinterpret_cast<uintptr_t*>(&member);
-		uint32_t start_idx_paged = start_idx_data / FLASH_PAGE_SIZE * FLASH_PAGE_SIZE;
+		uint32_t start_idx_paged = start_idx_data / FLASH_SECTOR_SIZE * FLASH_SECTOR_SIZE;
 		uint32_t end_idx_data = start_idx_data + sizeof(T);
-		uint32_t end_idx_paged = (end_idx_data + FLASH_PAGE_SIZE - 1) / FLASH_PAGE_SIZE * FLASH_PAGE_SIZE;
+		uint32_t end_idx_paged = (end_idx_data + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE * FLASH_SECTOR_SIZE;
 		if (end_idx_paged - start_idx_paged > MAX_WRITE_SIZE) {
 			LogError("persistent_storage::write() too large data to write, abort.");
 			return PICO_ERROR_GENERIC;
 		}
+		scoped_lock lock{_memory_mutex};
 		memcpy(_write_buffer.data() + start_idx_data - start_idx_paged, &data, sizeof(T));
 		#pragma GCC diagnostic pop
 		return _write_impl(start_idx_paged, start_idx_data, end_idx_data, end_idx_paged);
@@ -113,13 +114,16 @@ struct persistent_storage {
 		#pragma GCC diagnostic push
 		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 		uint32_t start_idx_data = begin_offset + *reinterpret_cast<uintptr_t*>(&member) + start_idx * sizeof(T);
-		uint32_t start_idx_paged = start_idx_data / FLASH_PAGE_SIZE * FLASH_PAGE_SIZE;
+		uint32_t start_idx_paged = start_idx_data / FLASH_SECTOR_SIZE * FLASH_SECTOR_SIZE;
 		uint32_t end_idx_data = start_idx_data + sizeof(T) * (end_idx - start_idx);
-		uint32_t end_idx_paged = (end_idx_data + FLASH_PAGE_SIZE - 1) / FLASH_PAGE_SIZE * FLASH_PAGE_SIZE;
+		uint32_t end_idx_paged = (end_idx_data + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE * FLASH_SECTOR_SIZE;
 		if (end_idx_paged - start_idx_paged > MAX_WRITE_SIZE) {
 			LogError("persistent_storage::write() too large data to write, abort.");
 			return PICO_ERROR_GENERIC;
 		}
+		LogInfo("before lock write_array_range");
+		scoped_lock lock{_memory_mutex};
+		LogInfo("after lock");
 		memcpy(_write_buffer.data() + start_idx_data - start_idx_paged, data, end_idx_data - start_idx_data);
 		#pragma GCC diagnostic pop
 		return _write_impl(start_idx_paged, start_idx_data, end_idx_data, end_idx_paged);
@@ -129,6 +133,7 @@ struct persistent_storage {
 		// read is a simple copy from flash memory
 		#pragma GCC diagnostic push
 		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+		scoped_lock lock{_memory_mutex};
 		memcpy(&out, storage_begin + *reinterpret_cast<uintptr_t*>(&member), sizeof(T));
 		#pragma GCC diagnostic pop
 	}
@@ -137,6 +142,7 @@ struct persistent_storage {
 		// read is a simple copy from flash memory
 		#pragma GCC diagnostic push
 		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+		scoped_lock lock{_memory_mutex};
 		memcpy(out, storage_begin + *reinterpret_cast<uintptr_t*>(&member) + start_idx * sizeof(T), sizeof(T) * (end_idx - start_idx));
 		#pragma GCC diagnostic pop
 	}
@@ -144,6 +150,7 @@ struct persistent_storage {
 	const T& view(M member) const {
 		#pragma GCC diagnostic push
 		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+		scoped_lock lock{_memory_mutex};
 		return *reinterpret_cast<const T*>(storage_begin + *reinterpret_cast<uintptr_t*>(&member));
 		#pragma GCC diagnostic pop
 	}
@@ -151,13 +158,13 @@ struct persistent_storage {
 	std::span<T> view(M member, uint32_t start_idx, uint32_t end_idx) const {
 		#pragma GCC diagnostic push
 		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+		scoped_lock lock{_memory_mutex};
 		return {(T*)(storage_begin + *reinterpret_cast<uintptr_t*>(&member) + start_idx * sizeof(T)), end_idx - start_idx};
 		#pragma GCC diagnostic pop
 	}
 
 	/*INTERNAL*/ struct _write_data {const char *src_start, *src_end; uint32_t dst_offset;}; // dst offset is the offset of the flash begin
 	/*INTERNAL*/ err_t _write_impl(uint32_t start_paged, uint32_t start_data, uint32_t end_data, uint32_t end_paged) {
-		scoped_lock lock{_memory_mutex};
 		if (start_data != start_paged)
 			memcpy(_write_buffer.data(), flash_begin + start_paged, start_data - start_paged);	
 		if (end_data != end_paged)
@@ -166,16 +173,16 @@ struct persistent_storage {
 					.src_end = _write_buffer.data() + end_paged - start_paged, 
 					.dst_offset = start_paged};
 		// first erase as flash_range_program only allows to change 1s to 0s, but not the other way around
-		err_t err = flash_safe_execute(_flash_erase, reinterpret_cast<void*>(&write_data), UINT32_MAX);
-		if (err != PICO_OK)
-			return err;
-		return flash_safe_execute(_flash_program, reinterpret_cast<void*>(&write_data), UINT32_MAX);
+		uint32_t ints = save_and_disable_interrupts();
+		_flash_erase(write_data);
+		_flash_program(write_data);
+		restore_interrupts(ints);
+		return PICO_OK;
 	}
-	/*INTERNAL*/ static void __no_inline_not_in_flash_func(_flash_erase)(void *param) {
-		const _write_data &data = *reinterpret_cast<_write_data*>(param);
+	/*INTERNAL*/ static void _flash_erase(const _write_data &data) {
 		const uint32_t write_size = data.src_end - data.src_start;
-		if (write_size % FLASH_PAGE_SIZE != 0) {
-			LogError("_flash_erase(): write range must be a multiple of the flash_page_size. Ignoreing write");
+		if (write_size % FLASH_SECTOR_SIZE != 0) {
+			LogError("_flash_erase(): write range must be a multiple of the FLASH_SECTOR_SIZE. Ignoreing write");
 			return;
 		}
 		if (write_size + data.dst_offset > FLASH_SIZE) {
@@ -184,11 +191,10 @@ struct persistent_storage {
 		}
 		flash_range_erase(data.dst_offset, write_size);
 	}
-	/*INTERNAL*/ static void __no_inline_not_in_flash_func(_flash_program)(void *param) {
-		const _write_data &data = *reinterpret_cast<_write_data*>(param);
+	/*INTERNAL*/ static void _flash_program(const _write_data &data) {
 		const uint32_t write_size = data.src_end - data.src_start;
-		if (write_size % FLASH_PAGE_SIZE != 0) {
-			LogError("_flash_program(): write range must be a multiple of the flash_page_size. Ignoreing write");
+		if (write_size % FLASH_SECTOR_SIZE != 0) {
+			LogError("_flash_program(): write range must be a multiple of the FLASH_SECTOR_SIZE. Ignoreing write");
 			return;
 		}
 		if (write_size + data.dst_offset > FLASH_SIZE) {
