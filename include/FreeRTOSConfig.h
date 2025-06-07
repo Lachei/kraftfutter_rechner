@@ -74,7 +74,7 @@
 /* Memory allocation related definitions. */
 #define configSUPPORT_STATIC_ALLOCATION         0
 #define configSUPPORT_DYNAMIC_ALLOCATION        1
-#define configTOTAL_HEAP_SIZE                   (24 * ( configMINIMAL_STACK_SIZE )) // heap size enough for 16 min stacks/tasks
+#define configTOTAL_HEAP_SIZE                   (32 * ( configMINIMAL_STACK_SIZE )) // heap size enough for 16 min stacks/tasks
 #define configAPPLICATION_ALLOCATED_HEAP        0
 
 /* Hook function related definitions. */
@@ -94,7 +94,7 @@
 /* Software timer related definitions. */
 #define configUSE_TIMERS                        1
 #define configTIMER_TASK_PRIORITY               ( configMAX_PRIORITIES - 1 )
-#define configTIMER_QUEUE_LENGTH                20
+#define configTIMER_QUEUE_LENGTH                10
 #define configTIMER_TASK_STACK_DEPTH            2048
 
 /* Interrupt nesting behaviour configuration. */

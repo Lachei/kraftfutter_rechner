@@ -20,7 +20,7 @@ struct kuh {
 	int halsbandnr;
 	float kraftfuttermenge;
 	uint32_t abkalbungstag;
-	static_ring_buffer<uint32_t, 117> letze_fuetterungen;
+	static_ring_buffer<uint32_t, 117> letzte_fuetterungen;
 };
 /** 
  * @brief Add new members always at the front and leave the ones in the back the same
