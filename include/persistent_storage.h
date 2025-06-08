@@ -67,7 +67,7 @@ static char *flash_begin{reinterpret_cast<char*>(uintptr_t(XIP_BASE))};
  * persistent_storage_t::Default().read(&layout::storage_b, mem_b);
  */
 
-template<typename persistent_mem_layout, int MAX_WRITE_SIZE = FLASH_SECTOR_SIZE>
+template<typename persistent_mem_layout, int MAX_WRITE_SIZE = 2 * FLASH_SECTOR_SIZE>
 struct persistent_storage {
 	static constexpr uint32_t begin_offset{FLASH_SIZE - sizeof(persistent_mem_layout)}; // flash page alignment is done only when writing
 	const char *storage_begin{flash_begin + begin_offset};
