@@ -11,7 +11,7 @@
 #include "crypto_storage.h"
 #include "kuhspeicher.h"
 
-using tcp_server_typed = tcp_server<13, 5, 2, 1>;
+using tcp_server_typed = tcp_server<13, 6, 2, 1>;
 tcp_server_typed& Webserver() {
 	// default endpoints from upstream
 	const auto static_page_callback = [] (std::string_view page, std::string_view status, std::string_view type = "text/html") {
@@ -281,6 +281,19 @@ tcp_server_typed& Webserver() {
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
 	};
+	const auto post_reboot = [&fill_unauthorized](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		std::string_view auth_header = req.headers_view.get_header("Authorization");
+		if (auth_header.empty() || crypto_storage::Default().check_authorization(req.method, auth_header).empty()) {
+			fill_unauthorized(req, res);
+			return;
+		}
+
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", DEFAULT_SERVER);
+		res.res_add_header("Content-Length", "0");
+		res.res_write_body();
+		wifi_storage::Default().request_reboot = true;
+	};
 
 	static tcp_server_typed webserver{
 		.port = 80,
@@ -310,6 +323,7 @@ tcp_server_typed& Webserver() {
 			tcp_server_typed::endpoint{{.path_match = true}, "/ap_active", set_ap_active},
 			tcp_server_typed::endpoint{{.path_match = true}, "/wifi_connect", connect_to_wifi},
 			tcp_server_typed::endpoint{{.path_match = true}, "/login", post_login},
+			tcp_server_typed::endpoint{{.path_match = true}, "/reboot", post_reboot},
 		},
 		.put_endpoints = {
 			tcp_server_typed::endpoint{{.path_match = true}, "/set_password", set_password},

@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "hardware/watchdog.h"
+
 #include "log_storage.h"
 #include "static_types.h"
 #include "persistent_storage.h"
@@ -28,6 +30,8 @@ struct wifi_storage {
 	bool hostname_changed{true};
 	static_string<64> hostname{"DcDcConverter"};
 	static_string<64> mdns_service_name{"lachei_tcp_server"};
+
+	bool request_reboot{};
 
 	void update_hostname() {
 		if (!hostname_changed)
@@ -71,6 +75,15 @@ struct wifi_storage {
 		// remove old wifis
 		uint64_t cur_us = time_us_64();
 		wifis.remove_if([cur_us](const auto &e){ return cur_us - e.last_seen_us > DISCOVER_TIMEOUT_US; });
+	}
+
+	void check_set_reboot() {
+		if (request_reboot) {
+			LogInfo("Rebooting...");
+			watchdog_enable(1, 1);
+			// (*((volatile uint32_t*)(PPB_BASE + 0x0ED0C))) = 0x5FA0004;
+		}
+		request_reboot = false;
 	}
 
 	void write_to_persistent_storage() {

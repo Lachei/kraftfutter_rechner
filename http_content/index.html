@@ -2,13 +2,15 @@
 <html style="height:100%;background:linear-gradient(-45deg,#ee7752,#e73c7e,#23a6d5,#23d5ab);">
 <head><meta charset="utf-8"><title>Kraftfutterrechner</title><link rel="stylesheet" href="style">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body>
- <button id="li" style="float:right" onclick="li();">Anmelden</button>
- <h1 style="text-align:center">Kraftfutterrechner</h1>
+<body style="height:calc(100% - 16px);display:grid;grid-template-rows:auto auto 1fr;">
+ <div>
+  <button id="li" style="float:right" onclick="li();">Anmelden</button>
+  <h1 style="text-align:center">Kraftfutterrechner</h1>
+ </div>
  <div style="display:grid;grid-template-columns:repeat(3, auto);background-color:#d9ffd9;border-radius:20px;">
   <div class="t u  s">Übersicht</div>
   <div class="t e">Einstellungen</div>
-  <div class="t i">Internet</div>
+  <div class="t i">Systemeinstellungen</div>
  </div>
  <div id="v">
   <div style="display:grid;grid-template-columns:repeat(3, 100%);grid-gap:10px;height:100%;">

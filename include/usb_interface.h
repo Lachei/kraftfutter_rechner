@@ -107,7 +107,7 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		out << "--------------------------------------\n";
 	} else if (command == "cows") {
 		for (const auto &cow: kuhspeicher::Default().cows_view())
-			out << cow.name.sv() << ", " << (int)cow.name.size() <<  '\n';
+			out << cow.name.sv() << '\n';
 	} else if (command == "clear_cows") {
 		kuhspeicher::Default().clear();
 	} else {

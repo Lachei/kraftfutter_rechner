@@ -16,20 +16,12 @@
 <details id="kli" ontoggle="kl(this)"><summary>Kuhliste</summary></details>
 </div>
 </div>
-<h4>Passwort ändern</h4>
-<div class="lo"><p>Für Passworteinstellungen bitte anmelden.</div>
-<div class="li">
-<p><input id="pw1" type="password"><label for="pw1">Passwort eingeben</label>
-<p><input id="pw2" type="password"><label for="pw2">Passwort wiederholen</label>
-<p><button onclick="sp();">Passwort ändern</button>
-<p><pre id="e" class="er d">Passwörter nicht gleich</pre></div>
 </body>
 <script>
 function de(e){return document.getElementById(e);}function qa(e){return document.querySelectorAll(e);}
 var kli=de("kli"),kn=de("kn"),ko=de("ko"),hn=de("hn"),km=de("km"),ab=de("ab"),pw1=de("pw1"),pw2=de("pw2"),e=de("e"),lis=qa(".li"),los=qa(".lo");
 async function uc(){let c={name:kn.value,ohrenmarke:ko.value.padEnd(12,'0'),halsbandnr:Number(hn.value),kraftfuttermenge:Number(km.value),abkalbungstag:22};
 await fetch("cow_entry",{method:"PUT",body:JSON.stringify(c)});let o=de(c.name);if(o)o.remove();kli.innerHTML=ac(kli.innerHTML,c.name);s(kli);}
-async function sp(){if(pw1.value!=pw2.value)e.classList.remove("d");else {e.classList.add("d");await fetch("set_password",{method:"PUT",body:pw1.value});pw1.value=pw2.value="";}};
 parent.accb.push((l)=>{if(l){lis.forEach(e=>e.style.display="block");los.forEach(e=> e.style.display="none");}else{lis.forEach(e=>e.style.display="none");los.forEach(e=>e.style.display="block");};});
 function ac(s,c){return s+"<details id='"+c+"' ontoggle='kd(this);'><summary>"+c+"<href class='fr er' onclick='dp(\""+c+"\",event);'>&#128465;</href></summary></details>";}
 async function kl(o){let op=o.hasAttribute("open"),cs=1;
@@ -58,7 +50,7 @@ async function s(e){
 }
 async function dp(c, e){
 	e.preventDefault();
-	if(confirm("Do you really want to delete "+c)){await fetch("cow_entry",{method:"DELETE",body:c});de(c).remove();};
+	if(confirm("Kuh "+c+" wirklich löschen?")){await fetch("cow_entry",{method:"DELETE",body:c});de(c).remove();};
 };
 </script>
 </html>

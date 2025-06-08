@@ -9,30 +9,38 @@
 <td><input id="hi" type="text"></td><td><button onclick="uh();">Setzen</button></table>
 <div id="i">
 </div>
+<h4>Passwort ändern</h4>
+<div class="lo"><p>Für Passworteinstellungen bitte anmelden.</div>
+<div class="li">
+<p><input id="pw1" type="password"><label for="pw1">Passwort eingeben</label>
+<p><input id="pw2" type="password"><label for="pw2">Passwort wiederholen</label>
+<p><button onclick="sp();">Passwort ändern</button>
+<p><pre id="e" class="er d">Passwörter nicht gleich</pre></div>
+<h4>Neustart</h4><p><button onclick="if(confirm('Gerät wirkilich neustarten?'))fetch('reboot',{method:'POST'});">Gerät neustarten</button>
 </body>
 <script>
 const el='<details id="__ssid__"><summary>__ssid__<span class="d c">Verbunden</span></summary> <table style="width:100%"><tr> <td><input id="__ssid__pw" type="password"><label for="pw">Passwort</label></td> <td><div style="margin-top:30px;"><div class="wv4 w"><div class="wv3 w"><div class="wv2 w"><div class="wv1 w"></div></div></div></div></div></td><td><button onclick="co(\'__ssid__\');">Verbinden</button></td></table></tr></details>';
-const d=document;
-const i=d.getElementById("i");
-const ap=d.getElementById("ap");
-const hi=d.getElementById("hi");
+function de(e){return document.getElementById(e);}function qa(e){return document.querySelectorAll(e);}
+const i=de("i"),ap=de("ap"),hi=de("hi"),lis=qa(".li"),los=qa(".lo");
+parent.accb.push((l)=>{if(l){lis.forEach(e=>e.style.display="block");los.forEach(e=> e.style.display="none");}else{lis.forEach(e=>e.style.display="none");los.forEach(e=>e.style.display="block");};});
 const mr=(rs)=>{if(rs<-80)return"ws1";if(rs<-60)return"ws2";if(rs<-40)return"ws3";return"ws4"};
 const f=async ()=>{
 if(parent.p!="i"||!parent.lo)return;
 let w=await (await fetch("discovered_wifis")).json();
-for(let e of w){if(!d.getElementById(e.ssid))i.innerHTML+=el.replaceAll("__ssid__",e.ssid).replaceAll("__rssi__",mr(e.rrsi));
- s=d.getElementById(e.ssid);
+for(let e of w){if(!de(e.ssid))i.innerHTML+=el.replaceAll("__ssid__",e.ssid).replaceAll("__rssi__",mr(e.rrsi));
+ s=de(e.ssid);
  s.children[1].firstChild.firstChild.children[1].firstChild.className=mr(e.rssi);
  s.firstChild.children[0].className=e.connected?"c":"d c";}
 for(let e of i.children)if(!w.find(we=>we.ssid==e.id))e.remove();
 w=await (await fetch("ap_active")).text();
 ap.checked=w==="true";
-if(hi!=d.activeElement){
+if(hi!=document.activeElement){
 w=await (await fetch("host_name")).text();
-hi.value=w;} };
+hi.value=w;}};
 window.onload=()=>{parent.m["i"]=f;setInterval(f,4000);}
-const uap=async()=>{await fetch("ap_active",{method:"POST",body:String(ap.checked)})};
-const uh=async()=>{await fetch("host_name",{method:"POST",body:hi.value})};
-const co=async(id)=>{await fetch("wifi_connect",{method:"POST",body:id+" "+d.getElementById(id+"pw").value});}
+async function uap(){await fetch("ap_active",{method:"POST",body:String(ap.checked)})};
+async function uh(){await fetch("host_name",{method:"POST",body:hi.value})};
+async function co(id){await fetch("wifi_connect",{method:"POST",body:id+" "+d.getElementById(id+"pw").value});}
+async function sp(){if(pw1.value!=pw2.value)e.classList.remove("d");else {e.classList.add("d");await fetch("set_password",{method:"PUT",body:pw1.value});pw1.value=pw2.value="";}};
 </script>
 </html>

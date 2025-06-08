@@ -51,10 +51,19 @@ void wifi_search_task(void *) {
         access_point::Default().init();
 
     wifi_storage::Default().update_hostname();
+    int wifi_disconnected_count{};
 
     for (;;) {
         LogInfo("Wifi update loop");
+        wifi_storage::Default().check_set_reboot();
         wifi_storage::Default().update_wifi_connection();
+        if (wifi_storage::Default().wifi_connected)
+            wifi_disconnected_count = 0;
+        else
+            wifi_disconnected_count += 1;
+        if (wifi_disconnected_count >= 5)
+            access_point::Default().init();
+
         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, wifi_storage::Default().wifi_connected);
         wifi_storage::Default().update_hostname();
         wifi_storage::Default().update_scanned();
