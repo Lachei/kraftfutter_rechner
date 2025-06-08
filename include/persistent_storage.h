@@ -52,7 +52,7 @@ static char *flash_begin{reinterpret_cast<char*>(uintptr_t(XIP_BASE))};
  * persistent_storage_t::Default().read(&layout::storage_b, mem_b);
  */
 
-template<typename persistent_mem_layout, int MAX_WRITE_SIZE = FLASH_SECTOR_SIZE>
+template<typename persistent_mem_layout, int MAX_WRITE_SIZE = 2 * FLASH_SECTOR_SIZE>
 struct persistent_storage {
 	static constexpr uint32_t begin_offset{FLASH_SIZE - sizeof(persistent_mem_layout)}; // flash page alignment is done only when writing
 	const char *storage_begin{flash_begin + begin_offset};
@@ -158,13 +158,12 @@ struct persistent_storage {
 					.src_end = _write_buffer.data() + end_paged - start_paged, 
 					.dst_offset = start_paged};
 		// first erase as flash_range_program only allows to change 1s to 0s, but not the other way around
-		uint32_t ints = save_and_disable_interrupts();
-		_flash_erase(write_data);
-		_flash_program(write_data);
-		restore_interrupts(ints);
+		flash_safe_execute(_flash_erase, (void*)&write_data, UINT32_MAX);
+		flash_safe_execute(_flash_program, (void*)&write_data, UINT32_MAX);
 		return PICO_OK;
 	}
-	/*INTERNAL*/ static void _flash_erase(const _write_data &data) {
+	/*INTERNAL*/ static void __no_inline_not_in_flash_func(_flash_erase)(void *d) {
+		const _write_data &data = *reinterpret_cast<const _write_data*>(d);
 		const uint32_t write_size = data.src_end - data.src_start;
 		if (write_size % FLASH_SECTOR_SIZE != 0) {
 			LogError("_flash_erase(): write range must be a multiple of the FLASH_SECTOR_SIZE. Ignoreing write");
@@ -176,7 +175,8 @@ struct persistent_storage {
 		}
 		flash_range_erase(data.dst_offset, write_size);
 	}
-	/*INTERNAL*/ static void _flash_program(const _write_data &data) {
+	/*INTERNAL*/ static void __no_inline_not_in_flash_func(_flash_program)(void *d) {
+		const _write_data &data = *reinterpret_cast<const _write_data*>(d);
 		const uint32_t write_size = data.src_end - data.src_start;
 		if (write_size % FLASH_SECTOR_SIZE != 0) {
 			LogError("_flash_program(): write range must be a multiple of the FLASH_SECTOR_SIZE. Ignoreing write");
