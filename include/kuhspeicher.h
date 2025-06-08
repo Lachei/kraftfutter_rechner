@@ -43,6 +43,10 @@ struct kuhspeicher {
 	int cows_size() const { return std::clamp(persistent_storage_t::Default().view(&persistent_storage_layout::cows_size), 0, MAX_COWS); }
 	std::span<kuh> cows_view() const { return persistent_storage_t::Default().view(&persistent_storage_layout::cows, 0, cows_size()); }
 	bool write_or_create_cow(const kuh &cow) {
+		if (cow.name.size() > cow.name.storage.size()) {
+			LogError("Invalid cow name string, not adding cow");
+			return false;
+		}
 		auto cows_span = cows_view();
 		int dst{-1};
 		for (int i: iota{0, cows_span.size()}) {
@@ -62,6 +66,13 @@ struct kuhspeicher {
 		LogInfo("Cow {} written", cow.name.sv());
 		return true;
 	}
+	void delete_cow(int i, std::span<kuh> cows) {
+		if (size_t(i) != cows.size() - 1) {
+			persistent_storage_t::Default().write_array_range(&cows.back(), &persistent_storage_layout::cows, i, i + 1);
+		}
+		if (cows.size())
+			persistent_storage_t::Default().write(cows.size() - 1, &persistent_storage_layout::cows_size);
+	}
 	void delete_cow(std::string_view name) {
 		auto cows = cows_view();
 		int dst{-1};
@@ -75,11 +86,13 @@ struct kuhspeicher {
 			LogError("Failed to find cow {}", name);
 			return;
 		}
-		if (size_t(dst) != cows.size() - 1) {
-			persistent_storage_t::Default().write_array_range(&cows.back(), &persistent_storage_layout::cows, dst, dst + 1);
-		}
-		if (cows.size())
-			persistent_storage_t::Default().write(cows.size() - 1, &persistent_storage_layout::cows_size);
+		delete_cow(dst, cows);
+	}
+	void sanitize_cows() {
+		auto cows = cows_view();
+		for (int i: iota{0, cows.size()})
+			if (cows[i].name.size() > cows[i].name.storage.size())
+				delete_cow(i, cows);
 	}
 	kuh* parse_cow_from_json(std::string_view json) {
 		ASSERT(json.size() && json[0] == '{', "Invalid json");

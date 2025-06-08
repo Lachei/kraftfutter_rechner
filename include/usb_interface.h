@@ -55,6 +55,8 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		out << "    Print the log storage with a separator line to the console\n\n";
 		out << "  s\n";
 		out << "    Print a separator line with dashes\n\n";
+		out << "  cows\n";
+		out << "    Print all cow names\n";
 		out << "  clear_cows\n";
 		out << "    Clear all cows (sets the cows size to 0)\n\n";
 	} else if (command == "status") {
@@ -103,6 +105,9 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		print_logs();
 	} else if (command == "s") {
 		out << "--------------------------------------\n";
+	} else if (command == "cows") {
+		for (const auto &cow: kuhspeicher::Default().cows_view())
+			out << cow.name.sv() << ", " << (int)cow.name.size() <<  '\n';
 	} else if (command == "clear_cows") {
 		kuhspeicher::Default().clear();
 	} else {
