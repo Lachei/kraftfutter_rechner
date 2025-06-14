@@ -294,6 +294,7 @@ void tcp_server template_args_pure::message_buffer::req_update_structured_views(
 	if (!extract_newline(buffer_view))
 		LogInfo("req_update_structured_views() did not find a newline for body info");
 	body = buffer_view;
+	buffer.append('\0');
 }
 
 template template_args

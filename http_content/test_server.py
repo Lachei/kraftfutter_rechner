@@ -3,6 +3,7 @@ import http.server
 import socketserver
 import os
 import json
+import time
 
 parser = argparse.ArgumentParser(
                     prog='TestIotServer',
@@ -84,6 +85,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.wfile.write(json.dumps(cows[cow]).encode())
+        elif self.path == '/time':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(f"{int(time.time())}".encode())
         else:
             super().do_GET()
 
@@ -129,6 +135,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             content_len = int(self.headers.get('content-length', 0))
             pwd = self.rfile.read(content_len).decode()
             print('Set password to:', pwd)
+        elif self.path == '/time':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            content_len = int(self.headers.get('content-length', 0))
+            time = self.rfile.read(content_len).decode()
+            print('Set time to:', time)
         elif self.path == '/cow_entry':
             self.send_response(200)
             self.end_headers()

@@ -16,12 +16,14 @@
 <p><input id="pw2" type="password"><label for="pw2">Passwort wiederholen</label>
 <p><button onclick="sp();">Passwort ändern</button>
 <p><pre id="e" class="er d">Passwörter nicht gleich</pre></div>
+<h4>Zeiteinstellungen</h4>
+<p>Aktuelle Zeit: <span id='ct' style='margin-right:.3rem;'></span><button onclick='st()'>Setzen</button>
 <h4>Neustart</h4><p><button onclick="if(confirm('Gerät wirkilich neustarten?'))fetch('reboot',{method:'POST'});">Gerät neustarten</button>
 </body>
 <script>
 const el='<details id="__ssid__"><summary>__ssid__<span class="d c">Verbunden</span></summary> <table style="width:100%"><tr> <td><input id="__ssid__pw" type="password"><label for="pw">Passwort</label></td> <td><div style="margin-top:30px;"><div class="wv4 w"><div class="wv3 w"><div class="wv2 w"><div class="wv1 w"></div></div></div></div></div></td><td><button onclick="co(\'__ssid__\');">Verbinden</button></td></table></tr></details>';
 function de(e){return document.getElementById(e);}function qa(e){return document.querySelectorAll(e);}
-const i=de("i"),ap=de("ap"),hi=de("hi"),lis=qa(".li"),los=qa(".lo");
+const i=de("i"),ap=de("ap"),hi=de("hi"),lis=qa(".li"),los=qa(".lo"),ct=de("ct");
 parent.accb.push((l)=>{if(l){lis.forEach(e=>e.style.display="block");los.forEach(e=> e.style.display="none");}else{lis.forEach(e=>e.style.display="none");los.forEach(e=>e.style.display="block");};});
 const mr=(rs)=>{if(rs<-80)return"ws1";if(rs<-60)return"ws2";if(rs<-40)return"ws3";return"ws4"};
 const f=async ()=>{
@@ -42,5 +44,8 @@ async function uap(){await fetch("ap_active",{method:"POST",body:String(ap.check
 async function uh(){await fetch("host_name",{method:"POST",body:hi.value})};
 async function co(id){await fetch("wifi_connect",{method:"POST",body:id+" "+d.getElementById(id+"pw").value});}
 async function sp(){if(pw1.value!=pw2.value)e.classList.remove("d");else {e.classList.add("d");await fetch("set_password",{method:"PUT",body:pw1.value});pw1.value=pw2.value="";}};
+function t(){ct.innerHTML=(new Date()).toLocaleString();}
+setInterval(t, 500);
+async function st(){let t=await fetch("time",{method:"PUT",body:""+Math.round((new Date()).getTime()/1000)});}
 </script>
 </html>

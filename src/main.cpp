@@ -22,6 +22,7 @@
 #include "measurements.h"
 #include "crypto_storage.h"
 #include "kuhspeicher.h"
+#include "ntp_client.h"
 
 #define TEST_TASK_PRIORITY ( tskIDLE_PRIORITY + 1UL )
 
@@ -67,6 +68,8 @@ void wifi_search_task(void *) {
         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, wifi_storage::Default().wifi_connected);
         wifi_storage::Default().update_hostname();
         wifi_storage::Default().update_scanned();
+        if (wifi_storage::Default().wifi_connected)
+            ntp_client::Default().update_time();
         vTaskDelay(wifi_storage::Default().wifi_connected ? 5000: 1000);
     }
 }
