@@ -12,7 +12,7 @@
 #include "ntp_client.h"
 #include "kuhspeicher.h"
 
-using tcp_server_typed = tcp_server<14, 6, 3, 1>;
+using tcp_server_typed = tcp_server<15, 6, 3, 1>;
 
 tcp_server_typed& Webserver() {
 	// default endpoints from upstream
@@ -343,6 +343,7 @@ tcp_server_typed& Webserver() {
 			tcp_server_typed::endpoint{{.path_match = true}, "/internet", static_page_callback(INTERNET, STATUS_OK)},
 			tcp_server_typed::endpoint{{.path_match = true}, "/overview", static_page_callback(OVERVIEW, STATUS_OK)},
 			tcp_server_typed::endpoint{{.path_match = true}, "/settings", static_page_callback(SETTINGS, STATUS_OK)},
+			tcp_server_typed::endpoint{{.path_match = true}, "/cow.svg", static_page_callback(COW_SVG, STATUS_OK, "image/svg+xml")},
 		},
 		.post_endpoints = {
 			tcp_server_typed::endpoint{{.path_match = true}, "/set_log_level", set_log_level},

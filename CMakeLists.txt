@@ -39,6 +39,7 @@ add_html_pages_library(NAME dcdc-converter-html SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/http_content/internet
         ${CMAKE_CURRENT_SOURCE_DIR}/http_content/overview
         ${CMAKE_CURRENT_SOURCE_DIR}/http_content/settings
+        ${CMAKE_CURRENT_SOURCE_DIR}/http_content/cow.svg
 )
 
 
