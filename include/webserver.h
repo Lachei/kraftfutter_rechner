@@ -9,8 +9,9 @@
 #include "access_point.h"
 #include "persistent_storage.h"
 #include "crypto_storage.h"
+#include "ntp_client.h"
 
-using tcp_server_typed = tcp_server<11, 5, 1, 0>;
+using tcp_server_typed = tcp_server<12, 5, 2, 0>;
 tcp_server_typed& Webserver() {
 	const auto static_page_callback = [] (std::string_view page, std::string_view status, std::string_view type = "text/html") {
 		return [page, status, type](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res){
@@ -49,6 +50,29 @@ tcp_server_typed& Webserver() {
 		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
 		res.res_add_header("Content-Length", static_format<8>("{}", user.size()));
 		res.res_write_body(user);
+	};
+	const auto get_time = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		if (ntp_client::Default().ntp_time == 0) {
+			res.res_set_status_line(HTTP_VERSION, STATUS_INTERNAL_SERVER_ERROR);
+			res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+			res.res_add_header("Content-Length", "0");
+			res.res_write_body();
+			return;
+		}
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		auto length_hdr = res.res_add_header("Content-Length", "    ").value;
+		res.res_write_body();
+		int size = res.buffer.append_formatted("{}", ntp_client::Default().get_time_since_epoch());
+		if (0 == format_to_sv(length_hdr, "{}", size))
+			LogError("Failed to write header length");
+	};
+	const auto set_time = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		ntp_client::Default().set_time_since_epoch(strtoul(req.body.data(), nullptr, 10));
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", "LacheiEmbed(josefstumpfegger@outlook.de)");
+		res.res_add_header("Content-Length", "0");
+		res.res_write_body();
 	};
 	const auto get_logs = [] (const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
@@ -183,6 +207,8 @@ tcp_server_typed& Webserver() {
 			tcp_server_typed::endpoint{{.path_match = true}, "/ap_active", get_ap_active},
 			// auth endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/user", get_user},
+			// time endpoint
+			tcp_server_typed::endpoint{{.path_match = true}, "/time", get_time},
 			// static file serve endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/", static_page_callback(INDEX_HTML, STATUS_OK)},
 			tcp_server_typed::endpoint{{.path_match = true}, "/index", static_page_callback(INDEX_HTML, STATUS_OK)},
@@ -200,6 +226,7 @@ tcp_server_typed& Webserver() {
 		},
 		.put_endpoints = {
 			tcp_server_typed::endpoint{{.path_match = true}, "/set_password", set_password},
+			tcp_server_typed::endpoint{{.path_match = true}, "/time", set_time},
 		}
 	};
 	return webserver;

@@ -19,11 +19,7 @@ enum struct log_severity {
  * and overwrites old errors upon too many errors
  */
 struct log_storage {
-	static log_storage& Default() {
-		static log_storage storage{};
-		return storage;
-	}
-
+	static log_storage& Default();
 	struct log_entry{
 		log_severity severity{log_severity::Info};
 		static_string<MAX_LOG_LENGTH> message{};
@@ -105,8 +101,8 @@ inline void LogFatal(std::format_string<Args...> fmt, Args&&... args) {
 // ---------------------------------------------------------------------------------------
 // Static string logging
 // ---------------------------------------------------------------------------------------
-void LogInfo(std::string_view message) { log_storage::Default().push(log_severity::Info, message) /* std::println("[Info   ]: {}", message) */;}
-void LogWarning(std::string_view message) { log_storage::Default().push(log_severity::Warning, message) /* std::println("[Warning]: {}", message)*/;}
-void LogError(std::string_view message) { log_storage::Default().push(log_severity::Error, message) /* std::println("[Error  ]: {}", message)*/;}
-void LogFatal(std::string_view message) { log_storage::Default().push(log_severity::Fatal, message) /* std::println("[Fatal  ]: {}", message)*/;}
+inline void LogInfo(std::string_view message) { log_storage::Default().push(log_severity::Info, message) /* std::println("[Info   ]: {}", message) */;}
+inline void LogWarning(std::string_view message) { log_storage::Default().push(log_severity::Warning, message) /* std::println("[Warning]: {}", message)*/;}
+inline void LogError(std::string_view message) { log_storage::Default().push(log_severity::Error, message) /* std::println("[Error  ]: {}", message)*/;}
+inline void LogFatal(std::string_view message) { log_storage::Default().push(log_severity::Fatal, message) /* std::println("[Fatal  ]: {}", message)*/;}
 
