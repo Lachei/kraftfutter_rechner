@@ -38,9 +38,10 @@
   window.onresize=()=>{let x=d.getElementById(p).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x});}
   async function cu(){try{let l=await fetch("user");let u=await l.text();if(!u||u.length===0)throw 0;lie.innerHTML=u;}catch(e){lie.innerHTML='Anmelden';};};
   setInterval(cu, 10000);
-  async function gd(){try{let t=await fetch("time");t0=parseInt(await t.text());tu=(new Date()).getTime()/1000;}catch(e){t0=0;}};
+  async function gd(){try{let t=await fetch("time");t0=parseInt(await t.text());tu=(new Date()).getTime()/1000;}catch(e){t0=0;}}
   setInterval(gd, 10000);
-  async function pd(){;if(t0==0){td.innerHTML='&#x1f550; Zeit nicht synchronisiert';return;}td.innerHTML='&#x1f550;'+(new Date(t0*1000+(new Date()).getTime()-tu*1000)).toLocaleString();};
+  function st(){if(t0==0)throw new Error("Server time not synched");return new Date(t0*1000+(new Date()).getTime()-tu*1000);}
+  async function pd(){;if(t0==0){td.innerHTML='&#x1f550; Zeit nicht synchronisiert';return;}td.innerHTML='&#x1f550;'+st().toLocaleString();}
   setInterval(pd, 1000);
  </script>
 </body>
