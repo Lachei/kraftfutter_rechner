@@ -8,6 +8,7 @@
 #include "hardware/flash.h"
 
 #include "log_storage.h"
+#include "settings.h"
 #include "mutex.h"
 
 constexpr uint32_t FLASH_SIZE{PICO_FLASH_SIZE_BYTES};
@@ -27,6 +28,8 @@ struct kuh {
  * as the elements at the back of the layout always stay in the same position
  */
 struct persistent_storage_layout {
+	// settings
+	settings setting;
 	// main cow stuff storage
 	int cows_size;
 	std::array<kuh, MAX_COWS> cows;

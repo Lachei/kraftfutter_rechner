@@ -10,9 +10,10 @@
 #include "persistent_storage.h"
 #include "crypto_storage.h"
 #include "ntp_client.h"
+#include "settings.h"
 #include "kuhspeicher.h"
 
-using tcp_server_typed = tcp_server<15, 6, 3, 1>;
+using tcp_server_typed = tcp_server<16, 6, 4, 1>;
 
 tcp_server_typed& Webserver() {
 	// default endpoints from upstream
@@ -319,6 +320,36 @@ tcp_server_typed& Webserver() {
 		res.res_write_body();
 		wifi_storage::Default().request_reboot = true;
 	};
+	const auto get_settings = [&fill_unauthorized](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		std::string_view auth_header = req.headers_view.get_header("Authorization");
+		if (auth_header.empty() || crypto_storage::Default().check_authorization(req.method, auth_header).empty()) {
+			fill_unauthorized(req, res);
+			return;
+		}
+		
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", DEFAULT_SERVER);
+		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
+		res.res_write_body();
+		int content_length = settings::Default().dump_to_json(res.buffer);
+		if (0 == format_to_sv(length_hdr, "{}", content_length))
+			LogError("Failed to write header length");
+	};
+	const auto set_settings = [&fill_unauthorized](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		std::string_view auth_header = req.headers_view.get_header("Authorization");
+		if (auth_header.empty() || crypto_storage::Default().check_authorization(req.method, auth_header).empty()) {
+			fill_unauthorized(req, res);
+			return;
+		}
+
+		settings::Default().parse_from_json(req.body);
+		persistent_storage_t::Default().write(settings::Default(), &persistent_storage_layout::setting);
+		
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", DEFAULT_SERVER);
+		res.res_add_header("Content-Length", "0");
+		res.res_write_body();
+	};
 
 	static tcp_server_typed webserver{
 		.port = 80,
@@ -327,6 +358,7 @@ tcp_server_typed& Webserver() {
 			// kraftfutter-specific code
 			tcp_server_typed::endpoint{{.path_match = true}, "/cow_names", get_cow_names},
 			tcp_server_typed::endpoint{{.path_match = false}, "/cow_entry/", get_cow},
+			tcp_server_typed::endpoint{{.path_match = true}, "/setting", get_settings},
 			// interactive endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/logs", get_logs},
 			tcp_server_typed::endpoint{{.path_match = true}, "/discovered_wifis", get_discovered_wifis},
@@ -357,6 +389,7 @@ tcp_server_typed& Webserver() {
 			tcp_server_typed::endpoint{{.path_match = true}, "/set_password", set_password},
 			tcp_server_typed::endpoint{{.path_match = true}, "/time", set_time},
 			tcp_server_typed::endpoint{{.path_match = true}, "/cow_entry", put_cow},
+			tcp_server_typed::endpoint{{.path_match = true}, "/setting", set_settings},
 		},
 		.delete_endpoints = {
 			tcp_server_typed::endpoint{{.path_match = true}, "/cow_entry", delete_cow},
