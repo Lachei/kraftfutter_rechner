@@ -67,6 +67,11 @@ struct tcp_server {
 		headers<max_headers> headers_view{}; // actually only contains std::string views to underlying buffer
 		std::string_view body{};
 
+		struct tcp_pcb *tpcb{};
+		bool on_stream_out{};
+
+		tcp_server *parent_server{};
+
 		// ------------------------------------------------------
 		// request functions
 		// ------------------------------------------------------
@@ -90,7 +95,7 @@ struct tcp_server {
 		/** @brief writes the string_view the end of the backing buffer directly after the header section
 		  * and sets the internal body variable to exactly this string */
 		void res_write_body(std::string_view body = {});
-		void clear() { used = {}; buffer.clear(); method = {}; path = {}; http_version = {}; status = {}; headers_view.headers.clear(); body = {}; }
+		void clear() { used = {}; buffer.clear(); method = {}; path = {}; http_version = {}; status = {}; headers_view.headers.clear(); body = {}; tpcb = {}; on_stream_out = {}; }
 	};
 	using endpoint_callback = std::function<void(const message_buffer &request, message_buffer& response)>;
 	struct endpoint {
@@ -121,16 +126,16 @@ struct tcp_server {
 	int run_count{};
 
 	void process_request(uint32_t recieve_buffer_idx, struct tcp_pcb *client);
-	err_t send_data(uint32_t send_buffer_idx, struct tcp_pcb *client);
+	err_t send_data(std::string_view data, struct tcp_pcb *client);
 };
 
 // ------------------------------------------------------------------------------
 // implementations
 // ------------------------------------------------------------------------------
 
-/** @brief Contains all implementations regarding tcp server connections */
 namespace tcp_server_internal {
 
+/** @brief Contains all implementations regarding tcp server connections */
 constexpr static err_t clear_client_pcb(std::atomic<struct tcp_pcb*> &pcb) {
 	err_t err{ERR_OK};
 	tcp_arg(pcb, NULL);
@@ -295,6 +300,10 @@ void tcp_server template_args_pure::message_buffer::req_update_structured_views(
 template template_args
 void tcp_server template_args_pure::message_buffer::res_set_status_line(std::string_view http_version, std::string_view status) {
 	// sanity checks
+	if (on_stream_out) {
+		buffer.clear();
+		LogWarning("res_set_status_line() already streaming out");
+	}
 	if (!buffer.empty()) {
 		buffer.clear();
 		LogWarning("res_set_status_line() size != 0, is reset");
@@ -318,6 +327,10 @@ void tcp_server template_args_pure::message_buffer::res_set_status_line(std::str
 template template_args
 header tcp_server template_args_pure::message_buffer::res_add_header(std::string_view key, std::string_view value) {
 	// sanity checks
+	if (on_stream_out) {
+		buffer.clear();
+		LogWarning("res_add_header() already streaming out");
+	}
 	if (!body.empty()) {
 		body = {};
 		LogWarning("res_add_header() body.size() != 0, is reset");
@@ -334,11 +347,27 @@ header tcp_server template_args_pure::message_buffer::res_add_header(std::string
 
 template template_args
 void tcp_server template_args_pure::message_buffer::res_write_body(std::string_view body) {
-	if (this->body.empty())
+	if (this->body.empty() && !on_stream_out)
 		buffer.append("\r\n");
 	const char *s = this->body.empty() ? buffer.end(): this->body.begin();
 
-	buffer.append(body);
+	for (int i = 0; i < 32 && body.size(); ++i) {
+		int append_size = body.size(); 
+		int f = buffer.storage.size() - 1;
+		int m = f - buffer.size();
+		if (append_size > m) {
+			append_size = m;
+			on_stream_out = true;
+			s = buffer.data();
+		}
+		buffer.append(body.substr(0, append_size));
+		if (buffer.size() == f) {
+			LogInfo("Streaming out a frame of data");
+			parent_server->send_data(buffer.sv(), tpcb);
+			buffer.clear();
+		}
+		body = body.substr(append_size);
+	}
 	this->body = std::string_view{s, buffer.end()};
 }
 
@@ -411,6 +440,8 @@ void tcp_server template_args_pure::process_request(uint32_t recieve_buffer_idx,
 	}
 
 	auto &send_buffer = send_buffers[free_send_idx];
+	send_buffer.tpcb = client;
+	send_buffer.parent_server = this;
 
 	recieve_buffer.req_update_structured_views(); // parsing the recieve buffer
 
@@ -436,14 +467,13 @@ void tcp_server template_args_pure::process_request(uint32_t recieve_buffer_idx,
 	else
 		default_endpoint_cb(recieve_buffer, send_buffer);
 
-	send_data(free_send_idx, client);
+	send_data(send_buffer.buffer.sv(), client);
 	recieve_buffer.clear();
 	send_buffer.clear();
 }
 
 template template_args
-err_t tcp_server template_args_pure::send_data(uint32_t send_buffer_index, struct tcp_pcb *client) {
-	std::string_view data = send_buffers[send_buffer_index].buffer.sv();
+err_t tcp_server template_args_pure::send_data(std::string_view data, struct tcp_pcb *client) {
 	int retry = 10; // give 10 retries
 	while (data.size()) {
 		uint32_t free_space = std::min<uint32_t>(tcp_sndbuf(client), data.size());
@@ -452,7 +482,7 @@ err_t tcp_server template_args_pure::send_data(uint32_t send_buffer_index, struc
 		if (err != ERR_OK) {
 			LogWarning("Failed to write data {}, retries left {}", err, retry);
 			if (--retry > 0) {
-				cyw43_arch_wait_for_work_until(make_timeout_time_ms(10));
+				cyw43_arch_wait_for_work_until(make_timeout_time_ms(50));
 				continue;
 			}
 			return tcp_server_internal::tcp_server_result template_args_pure(this, -1, client);
