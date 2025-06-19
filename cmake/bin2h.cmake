@@ -56,8 +56,16 @@ function(BIN2H)
     set(oneValueArgs SOURCE_FILE VARIABLE_NAME HEADER_FILE)
     cmake_parse_arguments(BIN2H "${options}" "${oneValueArgs}" "" ${ARGN})
 
+    # try to minify the source
+    set(minified_file "${BIN2H_HEADER_FILE}.min.tmp")
+    execute_process(COMMAND minify ${BIN2H_SOURCE_FILE} -o ${minified_file} RESULT_VARIABLE res)
+    if (NOT res EQUAL 0)
+        message("Failed to minify ${BIN2H_SOURCE_FILE}")
+        file(COPY_FILE ${BIN2H_SOURCE_FILE} ${minified_file})
+    endif()
+
     # reads source file contents as hex string
-    file(READ ${BIN2H_SOURCE_FILE} hexString HEX)
+    file(READ ${minified_file} hexString HEX)
     string(LENGTH ${hexString} hexStringLength)
 
     # appends null byte if asked
