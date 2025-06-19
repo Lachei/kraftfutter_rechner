@@ -370,11 +370,11 @@ tcp_server_typed& Webserver() {
 			tcp_server_typed::endpoint{{.path_match = true}, "/time", get_time},
 			// static file serve endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/", static_page_callback(INDEX_HTML, STATUS_OK)},
-			tcp_server_typed::endpoint{{.path_match = true}, "/index", static_page_callback(INDEX_HTML, STATUS_OK)},
-			tcp_server_typed::endpoint{{.path_match = true}, "/style", static_page_callback(STYLE, STATUS_OK, "text/css")},
-			tcp_server_typed::endpoint{{.path_match = true}, "/internet", static_page_callback(INTERNET, STATUS_OK)},
-			tcp_server_typed::endpoint{{.path_match = true}, "/overview", static_page_callback(OVERVIEW, STATUS_OK)},
-			tcp_server_typed::endpoint{{.path_match = true}, "/settings", static_page_callback(SETTINGS, STATUS_OK)},
+			tcp_server_typed::endpoint{{.path_match = true}, "/index.html", static_page_callback(INDEX_HTML, STATUS_OK)},
+			tcp_server_typed::endpoint{{.path_match = true}, "/style.css", static_page_callback(STYLE_CSS, STATUS_OK, "text/css")},
+			tcp_server_typed::endpoint{{.path_match = true}, "/internet.html", static_page_callback(INTERNET_HTML, STATUS_OK)},
+			tcp_server_typed::endpoint{{.path_match = true}, "/overview.html", static_page_callback(OVERVIEW_HTML, STATUS_OK)},
+			tcp_server_typed::endpoint{{.path_match = true}, "/settings.html", static_page_callback(SETTINGS_HTML, STATUS_OK)},
 			tcp_server_typed::endpoint{{.path_match = true}, "/cow.svg", static_page_callback(COW_SVG, STATUS_OK, "image/svg+xml")},
 		},
 		.post_endpoints = {
