@@ -37,6 +37,7 @@ constexpr bool parse_remove_json_double_array(std::string_view &json, T &a) {
 		if (json.size() && json[0] == ']')
 			break;
 		JSON_ASSERT(json.size() && json[0] == ',', "Array missing comma");
+		json = json.substr(1);
 	}
 	JSON_ASSERT(json.size() && json[0] == ']', "Expected ']' at the end of array");
 	json = json.substr(1);

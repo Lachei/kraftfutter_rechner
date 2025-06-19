@@ -12,7 +12,7 @@ details{padding:10px;border-radius:20px;border:1px solid black;cursor:pointer;ma
 .s{box-shadow:0 0 0 3px green;}
 .t{display:inline-grid;text-align:center;padding:1rem 0;cursor:pointer;border-radius:20px;}
 .t:hover{background-color:green;transition: background-color 500ms linear;}
-.tp{display:inline-grid;border:none;border-radius:20px;width:100%;height:100%;background:#fffa;}
+.tp{display:inline-grid;border:none;border-radius:20px;width:100%;height:100%;background:#fffc;}
 .w{display:inline-block;border:5px solid transparent;border-top-color:currentColor;border-radius:50%;border-style:solid;margin:4px;}
 .ws3 .wv4.w, .ws2 .wv4.w, .ws2 .wv3.w, .ws1 .wv4.w, .ws1 .wv3.w, .ws1 .wv2.w{border-top-color:#eee;}
 .wv1{border-color:black;}
@@ -22,5 +22,5 @@ details{padding:10px;border-radius:20px;border:1px solid black;cursor:pointer;ma
 .lo{display:box;color:red;}
 .li{display:none;}
 .fr{float:right;}
-.cs{background-color:#fff6;margin:.5rem;padding:.2rem;}
+.cs{background-color:#fff9;margin:.5rem;padding:.2rem;}
 

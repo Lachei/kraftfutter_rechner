@@ -90,6 +90,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
             self.wfile.write(f"{int(time.time())}".encode())
+        elif self.path == '/setting':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(f"{{\"reset_times\":1,\"reset_offsets\":[1,10,17],\"rations\":5}}".encode())
         else:
             super().do_GET()
 
@@ -145,6 +150,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         elif self.path == '/cow_entry':
             self.send_response(200)
             self.end_headers()
+        elif self.path == '/setting':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            content_len = int(self.headers.get('content-length', 0))
+            settings = self.rfile.read(content_len).decode()
+            print('Set settings to:', settings)
         else:
             super().do_PUT()
 
