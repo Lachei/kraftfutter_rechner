@@ -12,10 +12,31 @@ struct kuhspeicher {
 	}
 
 	kuh cow{};
+	static_ring_buffer<uint8_t, 64, uint8_t> last_feeds{};
 
 	void clear() {
 		LogInfo("Clearing cows");
 		persistent_storage_t::Default().write(0, &persistent_storage_layout::cows_size);
+	}
+
+	void reload_last_feeds() {
+		last_feeds.clear();
+		const int N = last_feeds.storage.size();
+		std::span<kuh> cows = cows_view();
+		const auto last_feed_time = [&](int i){ return cows[i].letzte_fuetterungen.back().timestamp; };
+		for (int i: iota(0, cows.size())) {
+			if (last_feeds.full && last_feed_time(last_feeds[0]) > last_feed_time(i))
+				continue;
+			// sort the stuff
+			for (int i = (last_feeds.cur_write + N - 2) % N,
+				 j = (last_feeds.cur_write + N - 1) % N;
+				 j != last_feeds.cur_start;
+				 i = (i + N - 1) % N, j = (i + N - 1) % N) {
+				if (last_feed_time(last_feeds[i]) < last_feed_time(last_feeds[j]))
+					break;
+				std::swap(last_feeds[i], last_feeds[j]);
+			}
+		}
 	}
 
 	int cows_size() const { return std::clamp(persistent_storage_t::Default().view(&persistent_storage_layout::cows_size), 0, MAX_COWS); }

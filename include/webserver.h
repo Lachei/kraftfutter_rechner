@@ -13,7 +13,7 @@
 #include "settings.h"
 #include "kuhspeicher.h"
 
-using tcp_server_typed = tcp_server<16, 6, 4, 1>;
+using tcp_server_typed = tcp_server<18, 6, 4, 1>;
 
 tcp_server_typed& Webserver() {
 	// default endpoints from upstream
@@ -350,6 +350,18 @@ tcp_server_typed& Webserver() {
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
 	};
+	const auto last_feeds = [](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", DEFAULT_SERVER);
+		res.res_add_header("Content-Length", "0");
+		res.res_write_body();
+	};
+	const auto problematic_cows = [](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", DEFAULT_SERVER);
+		res.res_add_header("Content-Length", "0");
+		res.res_write_body();
+	};
 
 	static tcp_server_typed webserver{
 		.port = 80,
@@ -364,6 +376,8 @@ tcp_server_typed& Webserver() {
 			tcp_server_typed::endpoint{{.path_match = true}, "/discovered_wifis", get_discovered_wifis},
 			tcp_server_typed::endpoint{{.path_match = true}, "/host_name", get_hostname},
 			tcp_server_typed::endpoint{{.path_match = true}, "/ap_active", get_ap_active},
+			tcp_server_typed::endpoint{{.path_match = true}, "/last_feeds", last_feeds},
+			tcp_server_typed::endpoint{{.path_match = true}, "/problematic_cows", problematic_cows},
 			// auth endpoints
 			tcp_server_typed::endpoint{{.path_match = true}, "/user", get_user},
 			// time endpoint

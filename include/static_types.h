@@ -82,6 +82,10 @@ struct static_ring_buffer {
 	constexpr auto end() { return iterator{*this, cur_write}; }
 	constexpr auto begin() const { return iterator{*this, cur_start}; }
 	constexpr auto end() const { return iterator{*this, cur_write}; }
+	constexpr T& back() { return storage[(cur_write + N - 1) % N]; }
+	constexpr const T& back() const { return storage[(cur_write + N - 1) % N]; }
+	constexpr T& operator[](int i) { return storage[(cur_start + i) % N]; }
+	constexpr const T& operator[](int i) const { return storage[(cur_start + i) % N]; }
 	constexpr T* push() {T* ret = storage.data() + cur_write; 
 		if (cur_start == cur_write && full) cur_start = (cur_start + 1) % N; 
 		cur_write = (cur_write + 1) % N; 

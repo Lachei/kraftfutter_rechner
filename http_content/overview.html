@@ -3,7 +3,16 @@
  <head><meta charset="utf-8">
 </head>
  <body>
-  <h3>Messwerte:</h3>
+  <h3>Letze Fütterungen:</h3>
+  <div id="fd">
+   <table id="ft" class="st"><tr><th>Kuh</th><th>Kraftfutterstation</th><th>Fütterungszeit</th></tr>
+   </table>
+  </div>
+  <h3>Auffällige Kühe:</h3>
+  <div id="fd">
+   <table id="pc" class="st"><tr><th>Kuh</th><th>Nachrichtt</th></tr>
+   </table>
+  </div>
   <h3>Logs:</h3>
   <details id="dl" ontoggle="f();"><summary>Show logs</summary>
   <select onchange="sl();" id="ll">Log level <option>Info</option><option>Warning</option><option>Error</option><option>Fatal</option></select>
@@ -11,11 +20,17 @@
   <pre id="l"></pre></details>
  </body>
  <script>
- var d=document;
- var dl=d.getElementById("dl");
- var l=d.getElementById("l");
- var ll=d.getElementById("ll");
+ function de(e){return document.getElementById(e);}
+ var dl=de("dl"),l=de("l"),ll=de("ll"),ft=de("ft"),pc=de("pc");
  const f=async ()=>{
+  let fes=await fetch("last_feeds");fes=await fes.json();fes.reverse();
+  let tm=ft.firstChild.firstChild.outerHTML;
+  for(let fe of fes)tm+="<tr><td>"+fe.n+"</td><td>"+fe.s+"</td><td>"+parent.m2d(fe.t)+"</td></tr>";
+  ft.innerHTML=tm;
+  let pes=await fetch("problematic_cows");pes=await pes.json();
+  tm=pc.firstChild.firstChild.outerHTML;
+  for(let pe of pes)tm+="<tr><td>"+pe.n+"</td><td>"+pe.m+"</td></tr>";
+  pc.innerHTML=tm;
   if(parent.p!="u"||!parent.lo)return;if(!dl.hasAttribute("open"))return;
   let logs=await fetch("logs", {signal: AbortSignal.timeout(500)});
   let t=await logs.text();

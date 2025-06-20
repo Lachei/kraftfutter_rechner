@@ -8,7 +8,7 @@
 <p class="d"><input id="t2" type="number" value="12" min="0" max="24" onchange="st()"><label for="t2">Uhr, Rationsneustart 2</label>
 <p class="d"><input id="t3" type="number" value="16" min="0" max="24" onchange="st()"><label for="t3">Uhr, Rationsneustart 3</label>
 <p><button onclick="if(tt<3){++tt;ur();st();}">+ Rationsneustart</button> <button onclick="if(tt>1){tt--;ur();st();}">- Rationsneustart</button>
-<p><input id="tr" type="number" value="4" min="1" max="5" onchange="st();"><label for="tr">Rationen</label>
+<p><input id="ra" type="number" value="4" min="1" max="5" onchange="st();"><label for="ra">Rationen</label>
 <h4>Kuheinstellungen</h4>
 <div style="margin-left:10px">
 <p><input id="kn" ><label for="kn">Kuhname</label>
@@ -20,15 +20,15 @@
 <details id="kli" ontoggle="kl(this)"><summary>Kuhliste</summary></details>
 </div></div></body><script>
 function de(e){return document.getElementById(e);}function qa(e){return document.querySelectorAll(e);}
-var kli=de("kli"),kn=de("kn"),ko=de("ko"),hn=de("hn"),km=de("km"),ab=de("ab"),pw1=de("pw1"),pw2=de("pw2"),e=de("e"),lis=qa(".li"),los=qa(".lo"),tt=1,t1=de("t1"),t2=de("t2"),t3=de("t3"),tr=de("tr"),f=1;
+var kli=de("kli"),kn=de("kn"),ko=de("ko"),hn=de("hn"),km=de("km"),ab=de("ab"),pw1=de("pw1"),pw2=de("pw2"),e=de("e"),lis=qa(".li"),los=qa(".lo"),tt=1,t1=de("t1"),t2=de("t2"),t3=de("t3"),ra=de("ra"),f=1;
 async function uc(){let c={name:kn.value,ohrenmarke:ko.value.padEnd(12,'0'),halsbandnr:Number(hn.value),kraftfuttermenge:Number(km.value),abkalbungstag:22};
 await fetch("cow_entry",{method:"PUT",body:JSON.stringify(c)});let o=de(c.name);if(o)o.remove();kli.innerHTML=ac(kli.innerHTML,c.name);s(kli);}
 parent.accb.push(async (l)=>{if(l){lis.forEach(e=>e.style.display="block");los.forEach(e=> e.style.display="none");await ls();}else{lis.forEach(e=>e.style.display="none");los.forEach(e=>e.style.display="block");};});
-async function ls(){if(!f)return;f=0;let t=await fetch("setting");t=await t.json();tt=t.reset_times;[t1.value,t2.value,t3.value]=t.reset_offsets;tr.value=t.rations;ur();}
+async function ls(){if(!f)return;f=0;let t=await fetch("setting");t=await t.json();tt=t.reset_times;[t1.value,t2.value,t3.value]=t.reset_offsets;ra.value=t.rations;ur();}
 function vi(e,v){if(v)e.parentNode.classList.remove('d');else e.parentNode.classList.add('d');}
 function ur(){vi(t1,tt>=1);vi(t2,tt>=2);vi(t3,tt>=3);}
 function ac(s,c){return s+"<details id='"+c+"' ontoggle='kd(this);'><summary>"+c+"<href class='fr er' onclick='dp(\""+c+"\",event);'>&#128465;</href></summary></details>";}
-async function st(){await fetch("setting",{method:"PUT",body:JSON.stringify({reset_times:tt,reset_offsets:[+t1.value,+t2.value,+t3.value],rations:+tr.value})});}
+async function st(){await fetch("setting",{method:"PUT",body:JSON.stringify({reset_times:tt,reset_offsets:[+t1.value,+t2.value,+t3.value],rations:+ra.value})});}
 async function kl(o){let op=o.hasAttribute("open"),cs=1;
 	for(let cc=0;cc<cs;){
 		let cl=await fetch("cow_names");

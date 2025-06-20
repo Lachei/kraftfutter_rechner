@@ -15,13 +15,18 @@ constexpr uint32_t FLASH_SIZE{PICO_FLASH_SIZE_BYTES};
 
 constexpr int MAX_COWS{256};
 
+struct feed_entry {
+	uint8_t station:2 {};
+	uint32_t timestamp: 30{}; // the timestamp
+};
+
 struct kuh {
 	static_string<15, uint8_t> name;
 	std::array<char, 12> ohrenmarke;
 	int halsbandnr;
 	float kraftfuttermenge;
 	uint32_t abkalbungstag;
-	static_ring_buffer<uint32_t, 117> letzte_fuetterungen;
+	static_ring_buffer<feed_entry, 117> letzte_fuetterungen;
 };
 /** 
  * @brief Add new members always at the front and leave the ones in the back the same

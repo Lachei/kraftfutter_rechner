@@ -31,6 +31,7 @@
   var td=d.getElementById('td');
   var t0=0,tu=0;
   for(let a of d.getElementsByClassName("t")){a.onclick=()=>{d.querySelectorAll('.s')[0].classList.remove('s');let x=d.getElementById(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"}); p=a.classList[1];if(a.classList[1] in m)m[a.classList[1]]();a.classList.add('s');};};
+  function m2d(m){return new Date(m * 60000).toLocaleString();}
   function ol(){ let c = d.styleSheets[0].cssRules;
    let ct = '';[...c].forEach(r=>ct+=r.cssText);
    for (f of d.getElementsByClassName("tp"))f.contentDocument.head.innerHTML+="<style>"+ct+"</style>";
@@ -41,8 +42,8 @@
   setInterval(cu, 10000);
   async function gd(){try{let t=await fetch("time");t0=parseInt(await t.text());tu=(new Date()).getTime()/1000;}catch(e){t0=0;}}
   setInterval(gd, 10000);
-  function st(){if(t0==0)throw new Error("Server time not synched");return new Date(t0*1000+(new Date()).getTime()-tu*1000);}
-  async function pd(){;if(t0==0){td.innerHTML='&#x1f550; Zeit nicht synchronisiert';return;}td.innerHTML='&#x1f550;'+st().toLocaleString();}
+  function st(){if(t0==0)throw new Error("Nicht synchronisiert");return new Date(t0*1000+(new Date()).getTime()-tu*1000);}
+  async function pd(){;if(t0==0){td.innerHTML='&#x1f550; Nicht synchronisiert';return;}td.innerHTML='&#x1f550;'+st().toLocaleString();}
   setInterval(pd, 1000);
  </script>
 </body>

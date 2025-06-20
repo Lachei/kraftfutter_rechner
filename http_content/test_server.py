@@ -4,6 +4,8 @@ import socketserver
 import os
 import json
 import time
+import string
+import random
 
 parser = argparse.ArgumentParser(
                     prog='TestIotServer',
@@ -13,12 +15,30 @@ parser.add_argument('-p', '--port', help='The port the server listens to, defaul
 
 args = parser.parse_args()
 
+def get_time_m():
+    s = time.time()
+    return int(s / 60)
+
+def get_random_feed():
+    letters = string.ascii_lowercase
+    n = ''.join(random.choice(letters) for i in range(7))
+    s = random.randrange(1, 5)
+    return {'n':n,'s':s, 't':get_time_m()}
+
 log_counter = 0
 login_counter = 0
 hostname = "A beatiful thing"
 ap_active = "true"
 cows = {'Gerta':{'name':'Gerta','ohrenmarke':'DEGerta','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':111}, 
         'Biene':{'name':'Biene','ohrenmarke':'DEBiene','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':111}}
+last_feeds = [{'n':'a cow','s':2,'t':get_time_m()},
+              {'n':'another cow','s':1,'t':get_time_m()},
+              {'n':'be cow','s':3,'t':get_time_m()},
+              {'n':'albert','s':4,'t':get_time_m()},
+              {'n':'bert','s':3,'t':get_time_m()}]
+problematic_cows = [{'n':'Gurted','m':'a proper message'},
+                    {'n':'Salsa','m':'Happyness all around'},
+                    {'n':'Universe','m':'The answer of'}]
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -39,6 +59,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         global hostname
         global ap_active
         global cows
+        global last_feeds
+        global problematic_cows
         if self.path == '/logs':
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
@@ -95,6 +117,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
             self.wfile.write(f"{{\"reset_times\":1,\"reset_offsets\":[1,10,17],\"rations\":5}}".encode())
+        elif self.path == '/last_feeds':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            last_feeds.append(get_random_feed())
+            last_feeds=last_feeds[-100:]
+            self.wfile.write(json.dumps(last_feeds).encode())
+        elif self.path == '/problematic_cows':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(json.dumps(problematic_cows).encode())
         else:
             super().do_GET()
 
