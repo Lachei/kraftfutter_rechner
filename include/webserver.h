@@ -353,14 +353,17 @@ tcp_server_typed& Webserver() {
 	const auto last_feeds = [](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
 		res.res_add_header("Server", DEFAULT_SERVER);
-		res.res_add_header("Content-Length", "0");
+		auto length_hdr = res.res_add_header("Content-Length", "        ").value;
 		res.res_write_body();
+		int content_length = kuhspeicher::Default().print_last_feeds(res.buffer);
+		if (0 == format_to_sv(length_hdr, "{}", content_length))
+			LogError("Failed to write header length");
 	};
 	const auto problematic_cows = [](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
 		res.res_add_header("Server", DEFAULT_SERVER);
-		res.res_add_header("Content-Length", "0");
-		res.res_write_body();
+		res.res_add_header("Content-Length", "2");
+		res.res_write_body("[]");
 	};
 
 	static tcp_server_typed webserver{

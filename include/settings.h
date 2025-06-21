@@ -7,7 +7,7 @@
 
 struct settings {
 	int reset_times{1}; // at max 4
-	std::array<uint32_t, 3> reset_offsets{};
+	std::array<int, 3> reset_offsets{};
 	int rations{4};
 
 	static settings& Default() {

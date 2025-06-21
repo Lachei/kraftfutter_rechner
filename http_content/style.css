@@ -6,16 +6,16 @@ button:hover{background-color:green;transition: background-color 150ms linear;}
 input{margin-right: .5rem;}
 checkbox{appearance: none; width:40px; height:20px; background:#ccc; border-radius:20px; position:relative;" onchange="this.style.background=this.checked?'#4caf50':'#ccc';}
 details{padding:10px;border-radius:20px;border:1px solid black;cursor:pointer;margin:2px}
-table{width:100%;border-collapse:collapse;}
+table{border-collapse:collapse;background-color:#fff6}
 th{position:sticky;top:0;padding:.8rem;color:white;background-color:#6c7ae0;}
 td{padding:.3rem;}
-tr:nth-child(2n){background-color:#ddf;}
+tr:nth-child(2n){background-color:#ddfd;}
 td{text-align:center;}
 #v{width:100%;margin-top:4px;padding:1px;overflow:hidden;background-image:url('cow.svg');}
 #l{font-family:monospace;font-size:.8rem;overflow-x:scroll;}
 #ap{width:1rem;height:1rem;margin-left:1rem;}
 #fd{height:40vh;overflow:scroll;border:1px black solid;border-radius:15px;}
-.st{background-color:#fff}
+.st{width:100%;}
 .s{box-shadow:0 0 0 3px green;}
 .t{display:inline-grid;text-align:center;padding:1rem 0;cursor:pointer;border-radius:20px;}
 .t:hover{background-color:green;transition: background-color 500ms linear;}
@@ -29,5 +29,5 @@ td{text-align:center;}
 .lo{display:box;color:red;}
 .li{display:none;}
 .fr{float:right;}
-.cs{background-color:#fff9;margin:.5rem;padding:.2rem;}
+.cs{margin:.5rem;padding:.2rem;}
 

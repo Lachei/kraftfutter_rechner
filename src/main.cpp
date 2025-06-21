@@ -97,6 +97,9 @@ void startup_task(void *) {
     LogInfo("Loading settings");
     persistent_storage_t::Default().read(&persistent_storage_layout::setting, settings::Default());
     LogInfo("Loading settings done");
+    LogInfo("Loading last feeds");
+    kuhspeicher::Default().reload_last_feeds();
+    LogInfo("Loading last feeds done");
     LogInfo("Initialization done");
     std::cout << "Initialization done, get all further info via the commands shown in 'help'\n";
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);

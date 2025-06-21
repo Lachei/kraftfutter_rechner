@@ -59,6 +59,8 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		out << "    Print all cow names\n";
 		out << "  clear_cows\n";
 		out << "    Clear all cows (sets the cows size to 0)\n\n";
+		out << "  feed ${necklace} ${station}\n";
+		out << "    Feed a cow, meaning that it tries to find a cow given by necklace, returns the calculated amount of kraftfutter and adds a feeding entry to the cow\n\n";
 	} else if (command == "status") {
 		out << "measurements:\n";
 		out << "-------------\n";
@@ -110,6 +112,12 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 			out << cow.name.sv() << '\n';
 	} else if (command == "clear_cows") {
 		kuhspeicher::Default().clear();
+	} else if (command == "feed") {
+		std::string necklace, station;
+		in >> necklace >> station;
+		int necklace_nr = std::strtol(necklace.c_str(), nullptr, 10);
+		int station_nr = std::strtol(station.c_str(), nullptr, 10);
+		out << kuhspeicher::Default().feed_cow(necklace_nr, station_nr) << '\n';
 	} else {
 		out << "[ERROR] Command " << command << " unknown. Run command 'help' for a list of all available commands\n";
 	}
