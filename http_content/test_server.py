@@ -29,8 +29,8 @@ log_counter = 0
 login_counter = 0
 hostname = "A beatiful thing"
 ap_active = "true"
-cows = {'Gerta':{'name':'Gerta','ohrenmarke':'DEGerta','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':111}, 
-        'Biene':{'name':'Biene','ohrenmarke':'DEBiene','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':111}}
+cows = {'Gerta':{'name':'Gerta','ohrenmarke':'DEGerta','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':get_time_m(),'letzte_fuetterungen':['2:'+str(get_time_m() - 20)]}, 
+        'Biene':{'name':'Biene','ohrenmarke':'DEBiene','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':get_time_m()-24*60,'letzte_fuetterungen':['2:'+str(get_time_m() - 110)]}}
 last_feeds = [{'n':'a cow','s':2,'t':get_time_m()},
               {'n':'another cow','s':1,'t':get_time_m()},
               {'n':'be cow','s':3,'t':get_time_m()},

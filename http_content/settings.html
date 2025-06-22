@@ -21,7 +21,7 @@
 </div></div></body><script>
 function de(e){return document.getElementById(e);}function qa(e){return document.querySelectorAll(e);}
 var kli=de("kli"),kn=de("kn"),ko=de("ko"),hn=de("hn"),km=de("km"),ab=de("ab"),pw1=de("pw1"),pw2=de("pw2"),e=de("e"),lis=qa(".li"),los=qa(".lo"),tt=1,t1=de("t1"),t2=de("t2"),t3=de("t3"),ra=de("ra"),f=1;
-async function uc(){let c={name:kn.value,ohrenmarke:ko.value.padEnd(12,'0'),halsbandnr:Number(hn.value),kraftfuttermenge:Number(km.value),abkalbungstag:22};
+async function uc(){let c={name:kn.value,ohrenmarke:ko.value.padEnd(12,'0'),halsbandnr:Number(hn.value),kraftfuttermenge:Number(km.value),abkalbungstag:new Date(ab.value).getTime()/60000};
 await fetch("cow_entry",{method:"PUT",body:JSON.stringify(c)});let o=de(c.name);if(o)o.remove();kli.innerHTML=ac(kli.innerHTML,c.name);s(kli);}
 parent.accb.push(async (l)=>{if(l){lis.forEach(e=>e.style.display="block");los.forEach(e=> e.style.display="none");await ls();}else{lis.forEach(e=>e.style.display="none");los.forEach(e=>e.style.display="block");};});
 async function ls(){if(!f)return;f=0;let t=await fetch("setting");t=await t.json();tt=t.reset_times;[t1.value,t2.value,t3.value]=t.reset_offsets;ra.value=t.rations;ur();}
@@ -33,7 +33,6 @@ async function kl(o){let op=o.hasAttribute("open"),cs=1;
 	for(let cc=0;cc<cs;){
 		let cl=await fetch("cow_names");
 		cl=await cl.json();
-		console.log(cl);
 		cc+=cl.cow_names.length;
 		cs=cl.cows_size;
 		t="";
@@ -44,10 +43,11 @@ async function kl(o){let op=o.hasAttribute("open"),cs=1;
 	s(o);
 	o.ontoggle=()=>{};
 }
-function tr(a,b){return "<tr><td>"+a+"</tc><td>:"+b+"</td></tr>";}
+function tr(a,b){return "<tr><td>"+a+"</tc><td>"+b+"</td></tr>";}
 async function kd(o){
-let n=o.firstChild.innerHTML.split('<')[0],t=await fetch("cow_entry/"+n);t=await t.json();
-	o.innerHTML+="<table class='cs'>"+tr("Kuhname",t.name)+tr("Ohrenmarkennr",t.ohrenmarke)+tr("Halsbandnr",t.halsbandnr)+tr("Kraftfutter in kg",t.kraftfuttermenge)+tr("Abkalbedatum",t.abkalbungstag)+"</table><button onclick='kn.value=\""+t.name+"\";ko.value=\""+t.ohrenmarke+"\";hn.value="+t.halsbandnr+";km.value="+t.kraftfuttermenge+";ab.value="+t.abkalbungstag+";this.parentNode.removeAttribute(\"open\");window.scrollTo(0,0)'>Editieren</button>";
+let n=o.firstChild.innerHTML.split('<')[0],t=await fetch("cow_entry/"+n);t=await t.json();t.abkalbungstag*=60000;
+	let lf="<div style='max-height:3rem;'>"+t.letzte_fuetterungen.map(e=>{let t=e.split(":");return t[0]+":"+new Date(+t[1]*60000).toLocaleString();}).join('<br>')+"</div>";
+	o.innerHTML+="<table class='cs tw'>"+tr("Kuhname",t.name)+tr("Ohrenmarkennr",t.ohrenmarke)+tr("Halsbandnr",t.halsbandnr)+tr("Kraftfutter in kg",t.kraftfuttermenge)+tr("Abkalbedatum",new Date(t.abkalbungstag).toLocaleDateString())+tr("Letzte Fütterungen",lf)+"</table><button onclick='kn.value=\""+t.name+"\";ko.value=\""+t.ohrenmarke+"\";hn.value="+t.halsbandnr+";km.value="+t.kraftfuttermenge+";ab.valueAsDate=new Date("+t.abkalbungstag+");this.parentNode.removeAttribute(\"open\");window.scrollTo(0,0)'>Editieren</button>";
 	o.ontoggle=()=>{};
 }
 async function s(e){

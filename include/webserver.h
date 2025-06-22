@@ -262,10 +262,19 @@ tcp_server_typed& Webserver() {
 		res.res_add_header("Content-Type", CONTENT_JSON);
 		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
 		res.res_write_body();
-		auto content_length = res.buffer.append_formatted(
-			R"({{"name":"{}","ohrenmarke":"{}","halsbandnr":{},"kraftfuttermenge":{},"abkalbungstag":{}}})", 
+		int content_length = res.buffer.append_formatted(
+			R"({{"name":"{}","ohrenmarke":"{}","halsbandnr":{},"kraftfuttermenge":{},"abkalbungstag":{},"letzte_fuetterungen":[)", 
 			cow->name.sv(), array_to_sv(cow->ohrenmarke), cow->halsbandnr, cow->kraftfuttermenge, cow->abkalbungstag
 		);
+		for (const auto &feed_entry: cow->letzte_fuetterungen) {
+			if (&feed_entry != &cow->letzte_fuetterungen[0]) {
+				res.buffer.append(',');
+				++content_length;
+			}
+			content_length += res.buffer.append_formatted(R"("{}:{}")", feed_entry.station, feed_entry.timestamp);
+		};
+		res.buffer.append("]}");
+		content_length += 2;
 		if (0 == format_to_sv(length_hdr, "{}", content_length))
 			LogError("Failed to write header length");
 	};
@@ -307,6 +316,24 @@ tcp_server_typed& Webserver() {
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();
 	};
+	const auto put_kraftfutter = [&fill_unauthorized](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
+		std::string_view auth_header = req.headers_view.get_header("Authorization");
+		if (auth_header.empty() || crypto_storage::Default().check_authorization(req.method, auth_header).empty()) {
+			fill_unauthorized(req, res);
+			return;
+		}
+
+		std::string_view body = req.body;
+		std::string_view cow_name = extract_word(body);
+		float kraftfutter_menge = std::strtof(body.data(), nullptr);
+		kuhspeicher::Default().set_cow_kraftfutter(cow_name, kraftfutter_menge);
+
+		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		res.res_add_header("Server", DEFAULT_SERVER);
+		res.res_add_header("Content-Length", "0");
+		res.res_write_body();
+	};
+
 	const auto post_reboot = [&fill_unauthorized](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		std::string_view auth_header = req.headers_view.get_header("Authorization");
 		if (auth_header.empty() || crypto_storage::Default().check_authorization(req.method, auth_header).empty()) {

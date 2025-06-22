@@ -170,6 +170,20 @@ struct kuhspeicher {
 		delete_cow(dst, cows);
 	}
 
+	void set_cow_kraftfutter(std::string_view cow_name, float kraftfutter) {
+		std::span<kuh> cows{cows_view()};
+		for (int i: iota{0, cows.size()}) {
+			const auto &c = cows[i];
+			if (c.name.sv() != cow_name)
+				continue;
+			cow = c;
+			cow.kraftfuttermenge = kraftfutter;
+			write_or_create_cow(c, i);
+			return;
+		}
+		LogError("Could not find the cow to set kraftfutter");
+	}
+
 	void sanitize_cows() {
 		auto cows = cows_view();
 		for (int i: iota{0, cows.size()})
