@@ -38,6 +38,7 @@
  };
  window.onload=()=>{
   parent.m["u"]=f;
+  f();
   setInterval(f,4000);
  }
  const sl=async()=>{await fetch("set_log_level",{method:"POST",body:ll.options[ll.selectedIndex].text});};

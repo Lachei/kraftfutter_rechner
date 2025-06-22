@@ -28,19 +28,20 @@ struct kuhspeicher {
 	void reload_last_feeds() {
 		last_feeds.clear();
 		std::span<kuh> cows = cows_view();
-		const int N = cows[0].letzte_fuetterungen.size();
 		const auto last_feed_time = [&](last_feed f){ return cows[f.cow_idx].letzte_fuetterungen.storage[f.feed_idx].timestamp; };
 		for (int i: iota(0, cows.size())) {
-			last_feed lf{uint8_t(i), uint8_t((cows[i].letzte_fuetterungen.cur_write + N - 1) % N)};
-			if (cows[i].letzte_fuetterungen.empty() || (!last_feeds.empty() && last_feed_time(last_feeds[0]) > last_feed_time(lf)))
-				continue;
-			last_feeds.push(lf);
-			// sort the stuff
-			for (int i = last_feeds.size() - 2, j = last_feeds.size() - 1;
-			     i > 0; --i, --j) {
-				if (last_feed_time(last_feeds[i]) < last_feed_time(last_feeds[j]))
-					break;
-				std::swap(last_feeds[i], last_feeds[j]);
+			for (int j: iota(0, cows[i].letzte_fuetterungen.size())) {
+				last_feed lf{uint8_t(i), uint8_t(j)};
+				if (last_feeds.size() && last_feed_time(last_feeds[0]) > last_feed_time(lf))
+					continue;
+				last_feeds.push(lf);
+				// sort the stuff
+				for (int i = last_feeds.size() - 2, j = last_feeds.size() - 1;
+				     i > 0; --i, --j) {
+					if (last_feed_time(last_feeds[i]) < last_feed_time(last_feeds[j]))
+						break;
+					std::swap(last_feeds[i], last_feeds[j]);
+				}
 			}
 		}
 	}
