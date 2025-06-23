@@ -46,13 +46,14 @@ async function kl(o){let op=o.hasAttribute("open"),cs=1;
 function tr(a,b){return "<tr><td>"+a+"</tc><td>"+b+"</td></tr>";}
 async function kd(o){
 let n=o.firstChild.innerHTML.split('<')[0],t=await fetch("cow_entry/"+n);t=await t.json();t.abkalbungstag*=60000;
-	let lf="<div style='max-height:3rem;'>"+t.letzte_fuetterungen.map(e=>{let t=e.split(":");return t[0]+":"+new Date(+t[1]*60000).toLocaleString();}).join('<br>')+"</div>";
-	o.innerHTML+="<table class='cs tw'>"+tr("Kuhname",t.name)+tr("Ohrenmarkennr",t.ohrenmarke)+tr("Halsbandnr",t.halsbandnr)+tr("Kraftfutter in kg",t.kraftfuttermenge)+tr("Abkalbedatum",new Date(t.abkalbungstag).toLocaleDateString())+tr("Letzte Fütterungen",lf)+"</table><button onclick='kn.value=\""+t.name+"\";ko.value=\""+t.ohrenmarke+"\";hn.value="+t.halsbandnr+";km.value="+t.kraftfuttermenge+";ab.valueAsDate=new Date("+t.abkalbungstag+");this.parentNode.removeAttribute(\"open\");window.scrollTo(0,0)'>Editieren</button>";
+	let lf="<div style='max-height:3rem;overflow:scroll'>"+t.letzte_fuetterungen.map(e=>{let t=e.split(":");return t[0]+":"+new Date(+t[1]*60000).toLocaleString();}).join('<br>')+"</div>";
+	o.innerHTML+="<table class='cs tw'>"+tr("Kuhname",t.name)+tr("Ohrenmarkennr",t.ohrenmarke)+tr("Halsbandnr",t.halsbandnr)+tr("Kraftfutter in kg","<input type='number' value='"+t.kraftfuttermenge+"' onchange='sf(\""+t.name+"\",this.value);'>")+tr("Abkalbedatum",new Date(t.abkalbungstag).toLocaleDateString())+tr("Letzte Fütterungen",lf)+"</table><button onclick='kn.value=\""+t.name+"\";ko.value=\""+t.ohrenmarke+"\";hn.value="+t.halsbandnr+";km.value="+t.kraftfuttermenge+";ab.valueAsDate=new Date("+t.abkalbungstag+");this.parentNode.removeAttribute(\"open\");window.scrollTo(0,0)'>Editieren</button>";
 	o.ontoggle=()=>{};
 }
 async function s(e){
 	Array.prototype.slice.call(e.children).map(x=>e.removeChild(x)).sort((x,y)=>x.id<y.id?-1:1).forEach(x=>e.appendChild(x));
 }
+async function sf(c,k){let t=await fetch("kraftfutter", {method:"PUT",body:c+" "+k});}
 async function dp(c, e){
 	e.preventDefault();
 	if(confirm("Kuh "+c+" wirklich löschen?")){await fetch("cow_entry",{method:"DELETE",body:c});de(c).remove();};

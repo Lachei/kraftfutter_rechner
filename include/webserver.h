@@ -13,7 +13,7 @@
 #include "settings.h"
 #include "kuhspeicher.h"
 
-using tcp_server_typed = tcp_server<18, 6, 4, 1>;
+using tcp_server_typed = tcp_server<18, 6, 5, 1>;
 
 tcp_server_typed& Webserver() {
 	// default endpoints from upstream
@@ -290,6 +290,9 @@ tcp_server_typed& Webserver() {
 		kuh* cow = kuhspeicher::Default().parse_cow_from_json(req.body);
 		if (!cow)
 			goto failure;
+		for (const auto& c: kuhspeicher::Default().cows_view())
+			if (cow->name.sv() == c.name.sv())
+				cow->letzte_fuetterungen = c.letzte_fuetterungen;
 		if (!kuhspeicher::Default().write_or_create_cow(*cow))
 			goto failure;
 			
@@ -434,6 +437,7 @@ tcp_server_typed& Webserver() {
 			tcp_server_typed::endpoint{{.path_match = true}, "/time", set_time},
 			tcp_server_typed::endpoint{{.path_match = true}, "/cow_entry", put_cow},
 			tcp_server_typed::endpoint{{.path_match = true}, "/setting", set_settings},
+			tcp_server_typed::endpoint{{.path_match = true}, "/kraftfutter", put_kraftfutter},
 		},
 		.delete_endpoints = {
 			tcp_server_typed::endpoint{{.path_match = true}, "/cow_entry", delete_cow},

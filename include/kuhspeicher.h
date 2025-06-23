@@ -32,12 +32,12 @@ struct kuhspeicher {
 		for (int i: iota(0, cows.size())) {
 			for (int j: iota(0, cows[i].letzte_fuetterungen.size())) {
 				last_feed lf{uint8_t(i), uint8_t(j)};
-				if (last_feeds.size() && last_feed_time(last_feeds[0]) > last_feed_time(lf))
+				if (last_feeds.full && last_feed_time(last_feeds[0]) > last_feed_time(lf))
 					continue;
 				last_feeds.push(lf);
 				// sort the stuff
 				for (int i = last_feeds.size() - 2, j = last_feeds.size() - 1;
-				     i > 0; --i, --j) {
+				     i >= 0; --i, --j) {
 					if (last_feed_time(last_feeds[i]) < last_feed_time(last_feeds[j]))
 						break;
 					std::swap(last_feeds[i], last_feeds[j]);
@@ -178,7 +178,7 @@ struct kuhspeicher {
 				continue;
 			cow = c;
 			cow.kraftfuttermenge = kraftfutter;
-			write_or_create_cow(c, i);
+			write_or_create_cow(cow, i);
 			return;
 		}
 		LogError("Could not find the cow to set kraftfutter");

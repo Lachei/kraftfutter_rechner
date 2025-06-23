@@ -23,6 +23,7 @@
  function de(e){return document.getElementById(e);}
  var dl=de("dl"),l=de("l"),ll=de("ll"),ft=de("ft"),pc=de("pc");
  const f=async ()=>{
+  if(parent.p!="u")return;
   let fes=await fetch("last_feeds");fes=await fes.json();fes.reverse();
   let tm=ft.firstChild.firstChild.outerHTML;
   for(let fe of fes)tm+="<tr><td>"+fe.n+"</td><td>"+fe.s+"</td><td>"+parent.m2d(fe.t)+"</td></tr>";
@@ -31,7 +32,7 @@
   tm=pc.firstChild.firstChild.outerHTML;
   for(let pe of pes)tm+="<tr><td>"+pe.n+"</td><td>"+pe.m+"</td></tr>";
   pc.innerHTML=tm;
-  if(parent.p!="u"||!parent.lo)return;if(!dl.hasAttribute("open"))return;
+  if(!dl.hasAttribute("open"))return;
   let logs=await fetch("logs", {signal: AbortSignal.timeout(500)});
   let t=await logs.text();
   l.innerHTML=t.replace(/(?:\r\n|\r|\n)/g, '<br>');

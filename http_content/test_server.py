@@ -191,6 +191,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             content_len = int(self.headers.get('content-length', 0))
             settings = self.rfile.read(content_len).decode()
             print('Set settings to:', settings)
+        elif self.path == '/kraftfutter':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            content_len = int(self.headers.get('content-length', 0))
+            k = self.rfile.read(content_len).decode().split(' ')
+            print('Setting kraftfutter for cow', k[0], 'to', k[1])
         else:
             super().do_PUT()
 
