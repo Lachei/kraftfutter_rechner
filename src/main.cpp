@@ -23,6 +23,7 @@
 #include "crypto_storage.h"
 #include "kuhspeicher.h"
 #include "ntp_client.h"
+#include "uart_storage.h"
 
 #define TEST_TASK_PRIORITY ( tskIDLE_PRIORITY + 1UL )
 
@@ -38,17 +39,24 @@ void usb_comm_task(void *) {
     }
 }
 
-void measure_task(void *) {
+void recieve_task(void *) {
 }
 
-void control_task(void *) {
-    time_us_64();
-
+void transmit_task(void *) {
+    for (;;) {
+        LogInfo("Sending uart package");   
+        std::array<uint8_t, 4> pack_a{0x41, 0xd2, 0x84, 0x56};
+        uart_futterstationen::Default().puts(pack_a);
+        vTaskDelay(500);
+        std::array<uint8_t, 4> pack_b{0xc0, 0xd2, 0x84, 0x56};
+        uart_futterstationen::Default().puts(pack_b);
+        vTaskDelay(500);
+    }
 }
 
 void wifi_search_task(void *) {
     LogInfo("Wifi task started");
-    if (wifi_storage::Default().ssid_wifi.empty()) // onyl start the access point by default if no normal wifi connection is set
+    if (wifi_storage::Default().ssid_wifi.empty()) // only start the access point by default if no normal wifi connection is set
         access_point::Default().init();
 
     wifi_storage::Default().update_hostname();
@@ -103,14 +111,19 @@ void startup_task(void *) {
     LogInfo("Initialization done");
     std::cout << "Initialization done, get all further info via the commands shown in 'help'\n";
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-    TaskHandle_t task_usb_comm;
-    TaskHandle_t task_update_wifi;
+    TaskHandle_t task_usb_comm{};
+    TaskHandle_t task_update_wifi{};
+    TaskHandle_t task_transmit_task{};
     auto err = xTaskCreate(usb_comm_task, "usb_comm", configMINIMAL_STACK_SIZE / 4, NULL, 1, &task_usb_comm);	// usb task also has to be started only after cyw43 init as some wifi functions are available
     if (err != pdPASS)
         LogError("Failed to start usb communication task with code {}" ,err);
     err = xTaskCreate(wifi_search_task, "UpdateWifiThread", configMINIMAL_STACK_SIZE / 4, NULL, 1, &task_update_wifi);
     if (err != pdPASS)
         LogError("Failed to start usb communication task with code {}" ,err);
+    err = xTaskCreate(transmit_task, "UartTransmitTask", 128, NULL, 1, &task_transmit_task);
+    if (err != pdPASS)
+        LogError("Failed to start uart communication task with code {}" ,err);
+
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
     for (;;) vTaskDelay(1<<20);
 }
