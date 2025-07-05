@@ -51,6 +51,21 @@ struct settings {
 		}
 		return true;
 	}
+	constexpr bool sanitize() {
+		bool change{};
+		int rt = std::clamp(reset_times, 1, 3);
+		change |= rt != reset_times;
+		reset_times = rt;
+		for (int &t: reset_offsets) {
+			int tmp = std::clamp(t, 0, 24);
+			change |= tmp != t;
+			t = tmp;
+		}
+		int r = std::clamp(rations, 1, 8);
+		change |= r != rations;
+		rations = r;
+		return change;
+	}
 };
 
 /** @brief prints formatted for monospace output, eg. usb */

@@ -34,10 +34,11 @@ struct wifi_storage {
 	bool request_reboot{};
 
 	void update_hostname() {
-		if (!hostname_changed)
+		if (!hostname_changed || !wifi_connected)
 			return;
 
 		LogInfo("Hostname change detected, adopting hostname");
+		cyw43_arch_enable_sta_mode();
 		netif_set_hostname(&cyw43_state.netif[CYW43_ITF_STA], hostname.data());
 		if (!hostname_inited) {
 			mdns_resp_init(); 
@@ -52,14 +53,18 @@ struct wifi_storage {
 	}
 
 	void update_wifi_connection() {
-		wifi_connected = CYW43_LINK_JOIN == cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA);
+		wifi_connected = CYW43_LINK_UP == cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA);
 		if ((wifi_connected && !wifi_changed) || ssid_wifi.cur_size == 0 || pwd_wifi.cur_size < 8)
 			return;
 
-		LogInfo("Connecting to connect to wifi");
-		if (PICO_OK != cyw43_arch_wifi_connect_async(ssid_wifi.data(), pwd_wifi.data(), CYW43_AUTH_WPA2_AES_PSK)) {
+		if (wifi_changed) {
+			cyw43_arch_disable_sta_mode();
+			cyw43_arch_enable_sta_mode();
+		}
+
+		LogInfo("Connecting to wifi");
+		if (PICO_OK != cyw43_arch_wifi_connect_timeout_ms(ssid_wifi.data(), pwd_wifi.data(), CYW43_AUTH_WPA2_AES_PSK, 5000)) {
 			LogWarning("failed to connect, retry next update_wifi_connection_call()");
-			return;
 		}
 
 		wifi_changed = false;

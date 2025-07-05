@@ -92,6 +92,7 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		wifi_storage::Default().pwd_wifi.fill(pwd);
 		wifi_storage::Default().wifi_connected = false;
 		wifi_storage::Default().wifi_changed = true;
+		wifi_storage::Default().write_to_persistent_storage();
 	} else if (command == "set_log_level") {
 		std::string level;
 		in >> level;

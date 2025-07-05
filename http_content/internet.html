@@ -42,7 +42,7 @@ hi.value=w;}};
 window.onload=()=>{parent.m["i"]=f;setInterval(f,4000);}
 async function uap(){await fetch("ap_active",{method:"POST",body:String(ap.checked)})};
 async function uh(){await fetch("host_name",{method:"POST",body:hi.value})};
-async function co(id){await fetch("wifi_connect",{method:"POST",body:id+" "+d.getElementById(id+"pw").value});}
+async function co(id){await fetch("wifi_connect",{method:"POST",body:id+" "+de(id+"pw").value});}
 async function sp(){if(pw1.value!=pw2.value)e.classList.remove("d");else {e.classList.add("d");await fetch("set_password",{method:"PUT",body:pw1.value});pw1.value=pw2.value="";}};
 function t(){ct.innerHTML=(new Date()).toLocaleString();}
 setInterval(t, 500);

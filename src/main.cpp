@@ -112,6 +112,8 @@ void startup_task(void *) {
     LogInfo("Sanitizing cows done");
     LogInfo("Loading settings");
     persistent_storage_t::Default().read(&persistent_storage_layout::setting, settings::Default());
+    if (settings::Default().sanitize())
+        persistent_storage_t::Default().write(settings::Default(), &persistent_storage_layout::setting);
     LogInfo("Loading settings done");
     LogInfo("Loading last feeds");
     kuhspeicher::Default().reload_last_feeds();
@@ -126,14 +128,13 @@ void startup_task(void *) {
     TaskHandle_t task_usb_comm{};
     TaskHandle_t task_update_wifi{};
     TaskHandle_t task_transmit_task{};
-    TaskHandle_t task_recieve_task{};
     auto err = xTaskCreate(usb_comm_task, "usb_comm", configMINIMAL_STACK_SIZE / 4, NULL, 1, &task_usb_comm);	// usb task also has to be started only after cyw43 init as some wifi functions are available
     if (err != pdPASS)
         LogError("Failed to start usb communication task with code {}" ,err);
     err = xTaskCreate(wifi_search_task, "UpdateWifiThread", configMINIMAL_STACK_SIZE / 4, NULL, 1, &task_update_wifi);
     if (err != pdPASS)
         LogError("Failed to start usb communication task with code {}" ,err);
-    err = xTaskCreate(transmit_task, "UartTransmitTask", 32, NULL, 1, &task_transmit_task);
+    err = xTaskCreate(transmit_task, "UartTransmitTask", 128, NULL, 1, &task_transmit_task);
     if (err != pdPASS)
         LogError("Failed to start uart communication task with code {}" ,err);
 

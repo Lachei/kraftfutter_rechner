@@ -96,7 +96,7 @@
 #define LWIP_HTTPD_SSI_MULTIPART 0
 
 #if !NO_SYS
-#define TCPIP_THREAD_STACKSIZE 4096 // mDNS needs more stack
+#define TCPIP_THREAD_STACKSIZE (2 * 4096) // mDNS needs more stack
 #define DEFAULT_THREAD_STACKSIZE 1024
 #define DEFAULT_RAW_RECVMBOX_SIZE 8
 #define TCPIP_MBOX_SIZE 8
