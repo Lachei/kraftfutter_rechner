@@ -61,6 +61,7 @@ struct static_vector {
 	constexpr T* end() { return storage.begin() + cur_size; }
 	constexpr const T* begin() const { return storage.begin(); }
 	constexpr const T* end() const { return storage.begin() + cur_size; }
+	constexpr T& operator[](size_type i) { return storage[i]; }
 	constexpr T* push() { if (cur_size >= N) return {}; return storage.data() + cur_size++; }
 	constexpr bool push(const T& e) { if (cur_size == N) return false; storage[cur_size++] = e; return true; }
 	constexpr bool push(T&& e) { if (cur_size == N) return false; storage[cur_size++] = std::move(e); return true; }

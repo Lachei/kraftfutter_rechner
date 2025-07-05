@@ -6,7 +6,7 @@
 
 template <int RX, int TX, int UART_ID = 0, int BAUD_RATE = 9600, int DATA_BITS = 8, int STOP_BITS = 1, uart_parity_t PARITY = UART_PARITY_NONE> 
 struct uart_storage {
-	static uart_storage Default() {
+	static uart_storage& Default() {
 		static uart_storage uart;
 		return uart;
 	}
