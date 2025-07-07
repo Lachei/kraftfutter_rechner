@@ -4,7 +4,7 @@
 #include "pico/stdlib.h"
 #include "static_types.h"
 
-template <int RX, int TX, int UART_ID = 0, int BAUD_RATE = 9600, int DATA_BITS = 8, int STOP_BITS = 1, uart_parity_t PARITY = UART_PARITY_NONE> 
+template <int RX, int TX, int UART_ID = 0, int BAUD_RATE = 9600, int DATA_BITS = 8, int STOP_BITS = 1, uart_parity_t PARITY = UART_PARITY_EVEN> 
 struct uart_storage {
 	static uart_storage& Default() {
 		static uart_storage uart;
@@ -27,4 +27,5 @@ struct uart_storage {
 };
 
 using uart_futterstationen = uart_storage<17, 16, 0, 1200>;
+using uart_f2 = uart_storage<5, 4, 1, 1200>;
 

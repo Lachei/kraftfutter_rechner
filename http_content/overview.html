@@ -17,7 +17,7 @@
   <details id="dl" ontoggle="f();"><summary>Show logs</summary>
   <select onchange="sl();" id="ll">Log level <option>Info</option><option>Warning</option><option>Error</option><option>Fatal</option></select>
   <label for="ll">Log level setzen</label><p>
-  <pre id="l"></pre></details>
+  <pre id="l"></pre><button onclick="dow();">download</button></details>
  </body>
  <script>
  function de(e){return document.getElementById(e);}
@@ -37,6 +37,7 @@
   let t=await logs.text();
   l.innerHTML=t.replace(/(?:\r\n|\r|\n)/g, '<br>');
  };
+ function dow(){let a=document.createElement('a');a.href="data:application/octet-stream,"+encodeURIComponent(l.innerHTML);a.download=new Date().getTime()+'.txt';a.click();}
  window.onload=()=>{
   parent.m["u"]=f;
   f();
