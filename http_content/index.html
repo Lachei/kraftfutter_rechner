@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html style="height:100%;background:linear-gradient(-45deg,#ee7752,#e73c7e,#23a6d5,#23d5ab);">
-<head><meta charset="utf-8"><title>Kraftfutterrechner</title><link rel="stylesheet" href="style.css">
+<head><meta charset="utf-8"><title>Kraftfutterrechner</title><link rel="stylesheet" href="style.css" onload="document.getElementById('u').src='overview.html'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="height:calc(100% - 16px);display:grid;grid-template-rows:auto auto 1fr;">
  <div>
@@ -15,27 +15,28 @@
  </div>
  <div id="v" style="">
   <div style="display:grid;grid-template-columns:repeat(3, 100%);grid-gap:10px;height:100%;">
-   <iframe id="u" class="tp" src="overview.html" onload="document.getElementById('e').loading='eager';as(this);"></iframe>
-   <iframe id="e" class="tp" loading="lazy" src="settings.html" onload="d.getElementById('i').loading='eager';as(this);"></iframe>
-   <iframe id="i" class="tp" loading="lazy" src="internet.html" onload="as(this);ol();"></iframe>
+   <iframe id="u" class="tp" onload="de('e').src='settings.html';as(this);"></iframe>
+   <iframe id="e" class="tp" onload="de('i').src='internet.html';as(this);"></iframe>
+   <iframe id="i" class="tp" onload="as(this);ol();"></iframe>
   </div
  </div>
  <script>
+  function de(i){return document.getElementById(i);}
   var p="u";
   var lo=0;
   var accb = [];
   var m={};
   var d=document;
-  var v=d.getElementById('v');
-  var lie=d.getElementById('li');
-  var td=d.getElementById('td');
+  var v=de('v');
+  var lie=de('li');
+  var td=de('td');
   var t0=0,tu=0;
-  for(let a of d.getElementsByClassName("t")){a.onclick=()=>{d.querySelectorAll('.s')[0].classList.remove('s');let x=d.getElementById(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"}); p=a.classList[1];if(a.classList[1] in m)m[a.classList[1]]();a.classList.add('s');};};
+  for(let a of d.getElementsByClassName("t")){a.onclick=()=>{d.querySelectorAll('.s')[0].classList.remove('s');let x=de(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"}); p=a.classList[1];if(a.classList[1] in m)m[a.classList[1]]();a.classList.add('s');};};
   function m2d(m){return new Date(m * 60000).toLocaleString();}
   function as(e) {let c=d.styleSheets[0].cssRules; let ct='';[...c].forEach(r=>ct+=r.cssText);e.contentDocument.head.innerHTML+="<style>"+ct+"</style>";}
   function ol(){lo=1;gd();pd();cu();};
   async function li(){await fetch("login",{method:"POST"});await cu();}
-  window.onresize=()=>{let x=d.getElementById(p).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x});}
+  window.onresize=()=>{let x=de(p).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x});}
   async function cu(){try{let l=await fetch("user");let u=await l.text();if(!u||u.length===0)throw 0;lie.innerHTML=u;for(let e of accb)e(true);}catch(e){lie.innerHTML='Anmelden';for(let e of accb)e(false);};};
   setInterval(cu, 10000);
   async function gd(){try{let t=await fetch("time");t0=parseInt(await t.text());tu=(new Date()).getTime()/1000;}catch(e){t0=0;}}
