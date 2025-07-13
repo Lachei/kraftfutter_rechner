@@ -141,8 +141,8 @@ struct kuhspeicher {
 			persistent_storage_t::Default().write(s + 1, &persistent_storage_layout::cows_size);
 			dst = s;
 		}
-		persistent_storage_t::Default().write_array_range(&cow, &persistent_storage_layout::cows, dst, dst + 1);
-		LogInfo("Cow {} written", cow.name.sv());
+		err_t res = persistent_storage_t::Default().write_array_range(&cow, &persistent_storage_layout::cows, dst, dst + 1);
+		LogInfo("Cow {} written with result: {}", cow.name.sv(), res);
 		return true;
 	}
 

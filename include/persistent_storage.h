@@ -179,8 +179,12 @@ struct persistent_storage {
 					.src_end = _write_buffer.data() + end_paged - start_paged, 
 					.dst_offset = start_paged};
 		// first erase as flash_range_program only allows to change 1s to 0s, but not the other way around
-		flash_safe_execute(_flash_erase, (void*)&write_data, UINT32_MAX);
-		flash_safe_execute(_flash_program, (void*)&write_data, UINT32_MAX);
+		err_t res = flash_safe_execute(_flash_erase, (void*)&write_data, 500);
+		if (res != PICO_OK)
+			return res;
+		res = flash_safe_execute(_flash_program, (void*)&write_data, 500);
+		if (res != PICO_OK)
+			return res;
 		return PICO_OK;
 	}
 	/*INTERNAL*/ static void __no_inline_not_in_flash_func(_flash_erase)(void *d) {

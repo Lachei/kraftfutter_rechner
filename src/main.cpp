@@ -168,19 +168,19 @@ void startup_task(void *) {
     TaskHandle_t task_transmit_task{};
     TaskHandle_t task_recieve_1{};
     TaskHandle_t task_recieve_2{};
-    auto err = xTaskCreate(usb_comm_task, "usb_comm", configMINIMAL_STACK_SIZE / 4, NULL, 1, &task_usb_comm);	// usb task also has to be started only after cyw43 init as some wifi functions are available
+    auto err = xTaskCreate(usb_comm_task, "usb_comm", 512, NULL, 0, &task_usb_comm);	// usb task also has to be started only after cyw43 init as some wifi functions are available
     if (err != pdPASS)
         LogError("Failed to start usb communication task with code {}" ,err);
-    err = xTaskCreate(wifi_search_task, "UpdateWifiThread", configMINIMAL_STACK_SIZE / 4, NULL, 1, &task_update_wifi);
+    err = xTaskCreate(wifi_search_task, "UpdateWifiThread", 512, NULL, 0, &task_update_wifi);
     if (err != pdPASS)
         LogError("Failed to start usb communication task with code {}" ,err);
-    err = xTaskCreate(transmit_task, "UartTransmitTask", 128, NULL, 1, &task_transmit_task);
+    err = xTaskCreate(transmit_task, "UartTransmitTask", 128, NULL, 0, &task_transmit_task);
     if (err != pdPASS)
         LogError("Failed to start uart communication task with code {}" ,err);
-    err = xTaskCreate(recieve_task<uart_futterstationen>, "UartRecTask1", 128, NULL, 1, &task_recieve_1);
+    err = xTaskCreate(recieve_task<uart_futterstationen>, "UartRecTask1", 128, NULL, 0, &task_recieve_1);
     if (err != pdPASS)
         LogError("Failed to start uart recieve task 1 with code {}" ,err);
-    err = xTaskCreate(recieve_task<uart_f2>, "UartRecTask2", 128, NULL, 1, &task_recieve_2);
+    err = xTaskCreate(recieve_task<uart_f2>, "UartRecTask2", 128, NULL, 0, &task_recieve_2);
     if (err != pdPASS)
         LogError("Failed to start uart recieve task 2 with code {}" ,err);
 
@@ -196,7 +196,7 @@ int main( void )
     std::cout << "Starting FreeRTOS on all cores\n";
 
     TaskHandle_t task_startup;
-    xTaskCreate(startup_task, "StartupThread", configMINIMAL_STACK_SIZE, NULL, 1, &task_startup);
+    xTaskCreate(startup_task, "StartupThread", 512, NULL, 0, &task_startup);
 
     vTaskStartScheduler();
     return 0;

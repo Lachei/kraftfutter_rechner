@@ -13,8 +13,11 @@
 #define MEM_LIBC_MALLOC             0
 #endif
 #define MEM_ALIGNMENT               4
+#ifndef MAX_CONCURRENT_CX_HINT
+#define MAX_CONCURRENT_CX_HINT      6
+#endif
 #ifndef MEM_SIZE
-#define MEM_SIZE                    8096
+#define MEM_SIZE                    (MAX_CONCURRENT_CX_HINT * TCP_MSS)
 #endif
 #define MEMP_NUM_TCP_SEG            32
 #define MEMP_NUM_ARP_QUEUE          10
@@ -23,9 +26,9 @@
 #define LWIP_ETHERNET               1
 #define LWIP_ICMP                   1
 #define LWIP_RAW                    1
-#define TCP_WND                     (8 * TCP_MSS)
 #define TCP_MSS                     1460
-#define TCP_SND_BUF                 (8 * TCP_MSS)
+#define TCP_WND                     (MAX_CONCURRENT_CX_HINT * TCP_MSS)
+#define TCP_SND_BUF                 (MAX_CONCURRENT_CX_HINT * TCP_MSS)
 #define TCP_SND_QUEUELEN            ((4 * (TCP_SND_BUF) + (TCP_MSS - 1)) / (TCP_MSS))
 #define LWIP_NETIF_STATUS_CALLBACK  1
 #define LWIP_NETIF_LINK_CALLBACK    1
@@ -96,7 +99,7 @@
 #define LWIP_HTTPD_SSI_MULTIPART 0
 
 #if !NO_SYS
-#define TCPIP_THREAD_STACKSIZE (2 * 4096) // mDNS needs more stack
+#define TCPIP_THREAD_STACKSIZE (4096 * 2)
 #define DEFAULT_THREAD_STACKSIZE 1024
 #define DEFAULT_RAW_RECVMBOX_SIZE 8
 #define TCPIP_MBOX_SIZE 8
