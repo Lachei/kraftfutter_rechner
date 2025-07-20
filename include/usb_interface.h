@@ -25,6 +25,13 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 
 	std::string command;
 	in >> command;
+	for (int cur = 0; cur < int(command.size()) - 1;) {
+		if (command[cur + 1] == '\b' && command[cur] != '\b') {
+			command.erase(command.begin() + cur, command.begin() + cur + 2);
+			cur = std::max(cur - 1, 0);
+		} else
+			++cur;
+	}
 	if (command.empty() || command == "h" || command == "-h" || command == "--help" || command == "help") {
 		out << "Device controlling the powerstages for a dc-dc converter\n";
 		out << "The following commands are available to edit the state of the device:\n\n";
@@ -61,6 +68,8 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		out << "    Clear all cows (sets the cows size to 0)\n\n";
 		out << "  feed ${necklace} ${station}\n";
 		out << "    Feed a cow, meaning that it tries to find a cow given by necklace, returns the calculated amount of kraftfutter and adds a feeding entry to the cow\n\n";
+		out << "  mem_usage\n";
+		out << "    Print memory usage\n\n";
 	} else if (command == "status") {
 		out << "measurements:\n";
 		out << "-------------\n";
@@ -119,8 +128,14 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		int necklace_nr = std::strtol(necklace.c_str(), nullptr, 10);
 		int station_nr = std::strtol(station.c_str(), nullptr, 10);
 		out << kuhspeicher::Default().feed_cow(necklace_nr, station_nr) << '\n';
+	} else if (command == "mem_usage") {
+		xHeapStats stats{};
+		vPortGetHeapStats(&stats);
+		out << "Available Space : " << stats.xAvailableHeapSpaceInBytes << '\n';
+		out << "Total heap space: " << configTOTAL_HEAP_SIZE << '\n';
+		out << "Total use       : " << int((float(stats.xAvailableHeapSpaceInBytes) / float(configTOTAL_HEAP_SIZE)) * 100.f) << '\n';
 	} else {
-		out << "[ERROR] Command " << command << " unknown. Run command 'help' for a list of all available commands\n";
+		out << "[ERROR] Command '" << command << "' unknown. Run command 'help' for a list of all available commands\n";
 	}
 }
 

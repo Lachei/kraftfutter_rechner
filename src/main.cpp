@@ -39,7 +39,7 @@ void usb_comm_task(void *) {
     }
 }
 
-void emit_package(const static_vector<char, 16, uint8_t> &data) {
+void emit_package(std::string_view src, const static_vector<char, 16, uint8_t> &data) {
     static_string<32, uint8_t> output{};
     for (char c: data) {
         if (std::isalpha(c) || std::isdigit(c))
@@ -48,7 +48,7 @@ void emit_package(const static_vector<char, 16, uint8_t> &data) {
             output.append_formatted("0x{:x} ", c);
     }
     output.make_c_str_safe();
-    LogError("Package: {}", output.data());
+    LogError("{},{}: {}", time_us_64() / 1000, src, output.data());
 }
 
 struct uart_frame_state {
@@ -77,11 +77,11 @@ void monitor_task(void *) {
     auto & s2 = uart_state<uart_f2>();
     for (;;) {
         if (time_us_64() - s1.time > TIMEOUT && s1.package.size()) {
-            emit_package(s1.package);
+            emit_package("1", s1.package);
             s1.package.clear();
         }
         if (time_us_64() - s2.time > TIMEOUT && s2.package.size()) {
-            emit_package(s2.package);
+            emit_package("2", s2.package);
             s2.package.clear();
         }
         vTaskDelay(20);
