@@ -109,7 +109,7 @@ struct crypto_storage {
 			 	LogWarning("check_authorization_header(): unkwnown key '{}'", key);
 		}
 		if (response.size() != SHA_SIZE * 2) {
-			LogError("check_authorization_header(): response sha has the wrong length {}", response.size());
+			LogError("check_authorization_header(): auth sha wrong, length {}", response.size());
 			return {};
 		}
 		

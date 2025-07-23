@@ -166,7 +166,7 @@ constexpr static err_t tcp_server_result(void *arg, int status, struct tcp_pcb *
 		LogInfo("Server success");
 		return ERR_OK;
 	}
-	LogWarning("Server failed {}, deinitializing {}", status, client ? "one client": "no client");
+	LogInfo("Server failed {}, deinitializing {}", status, client ? "one client": "no client");
 	err_t err = ERR_OK;
 	for (auto &pcb: server.client_pcbs) {
 		if (pcb == nullptr || (client && pcb != client))

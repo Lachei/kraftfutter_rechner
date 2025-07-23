@@ -21,12 +21,12 @@ enum struct log_severity {
 struct log_storage {
 	static log_storage& Default();
 	struct log_entry{
-		log_severity severity{log_severity::Info};
+		log_severity severity{log_severity::Warning};
 		static_string<MAX_LOG_LENGTH> message{};
 	};
 
 	static_ring_buffer<log_entry, MAX_LOGS> logs{};
-	log_severity cur_severity{log_severity::Info};
+	log_severity cur_severity{log_severity::Warning};
 	
 	constexpr log_entry* push(log_severity severity, std::string_view static_message = {}) noexcept {
 		if (severity < cur_severity)

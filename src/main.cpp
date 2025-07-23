@@ -1,7 +1,5 @@
 /**
- * Copyright (c) 2022 Raspberry Pi (Trading) Ltd.
- *
- * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2025 Josef Stumpfegger
  */
 
 #include "pico/cyw43_arch.h"
@@ -24,6 +22,7 @@
 #include "kuhspeicher.h"
 #include "ntp_client.h"
 #include "uart_storage.h"
+#include "kraftfutterstation.h"
 
 #define TEST_TASK_PRIORITY ( tskIDLE_PRIORITY + 1UL )
 
