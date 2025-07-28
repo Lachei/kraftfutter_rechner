@@ -5,6 +5,8 @@
 #include "static_types.h"
 #include "mutex.h"
 #include "uart_storage.h"
+#include "ranges_util.h"
+#include "kuhspeicher.h"
 
 template<int MAX_STATIONS = 4, int RATIONS_PER_KG = 10, int MAX_RATIONS_IN_FLIGHT = 64, int REC_BUFFER_SIZE = 32>
 struct kraftfutterstation {
@@ -26,12 +28,12 @@ struct kraftfutterstation {
 	};
 	struct messages {
 		constexpr static message_timeout 
-			req_p0 = {"`RR",8000},
-			req_p1 = {"aRR",8000},  // req_p1,
-			req_p2 = {"@R\u0004V", 8000}, // req_p2 as template replace @,
-			req_feed = {"@S1\u0004\u0008", 8000}, // req_f template for feeed, replace @ with the corerct
-			req_p3_0 = {"\u00011\u00045", 8000}, // req_p3_0
-			req_p3_1 = {"\u00111\u00045", 8000}; // req_p3_1
+			req_p0 = {"`RR",60000},
+			req_p1 = {"aRR",60000},  // req_p1,
+			req_p2 = {"@R\u0004V", 80000}, // req_p2 as template replace @,
+			req_feed = {"@S1\u0004\u0008", 60000}, // req_f template for feeed, replace @ with the corerct
+			req_p3_0 = {"\u00011\u00045", 70000}, // req_p3_0
+			req_p3_1 = {"\u00111\u00045", 70000}; // req_p3_1
 	};
 	enum state {
 		send_req_p0,
@@ -48,7 +50,7 @@ struct kraftfutterstation {
 		return station;
 	}
 
-	struct halsband_rationen {
+	struct halsband_ration {
 		int halsband;
 		int rations_count;
 	};
@@ -59,7 +61,7 @@ struct kraftfutterstation {
 	};
 
 	state state{send_req_p0};
-	static_vector<halsband_rationen, MAX_RATIONS_IN_FLIGHT, uint8_t> halsband_rationen{};
+	static_vector<halsband_ration, MAX_RATIONS_IN_FLIGHT, uint8_t> halsband_rationen{};
 	std::array<uint64_t, MAX_STATIONS> station_last_feeds{};
 	std::array<int, MAX_STATIONS> station_cur_cow{};
 	mutex receive_mutex{};
@@ -132,11 +134,30 @@ struct kraftfutterstation {
 		case await_ack_cow: {
 			scoped_lock lock{receive_mutex};
 			const auto &p = received_packages.back();
-			if (p.ack_time > cow_request_time && 
-			    p.halsband != 0) {
+			bool cow_in_station = p.ack_time > cow_request_time && p.halsband != 0;
+			halsband_ration *entry = !cow_in_station ? nullptr:
+				halsband_rationen | find{p.halsband, &halsband_ration::halsband};
+
+			if (cow_in_station) {
 				station_cur_cow[cur_station] = p.halsband;
+			}
+			if (cow_in_station && !entry) {
+				// try fetch new ration
+				float amount = kuhspeicher::Default().feed_cow(p.halsband, cur_station);
+				if (amount > (1.f / RATIONS_PER_KG) && (entry = halsband_rationen.push())) {
+					entry->halsband = p.halsband;
+					entry->rations_count = amount * RATIONS_PER_KG;
+				} else
+					LogError("Cow with number {} could not be fed, kg: {}", p.halsband, amount);
+			}
+			if (entry) {
+				// dispense previously fetched rations
+				entry->rations_count -= 1;
+				if (entry->rations_count <= 0)
+					halsband_rationen.remove(entry - halsband_rationen.begin());
 				state = send_req_feed;
-			} else {
+			} 
+			if (state == await_ack_cow) {
 				station_cur_cow[cur_station] = 0;
 				state = send_req_p3;
 			}
