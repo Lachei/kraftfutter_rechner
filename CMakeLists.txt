@@ -18,8 +18,7 @@ include(cmake/html_pages_library.cmake)
 
 add_compile_options(-Wall)
 
-project(dcdc-converter C CXX)
-set (CMAKE_CXX_STANDARD 23)
+project(kraftfutterrechner C CXX)
 
 pico_sdk_init()
 
@@ -33,7 +32,7 @@ endif()
 # ----------------------------------------------------------------------------
 # Website content
 # ----------------------------------------------------------------------------
-add_html_pages_library(NAME dcdc-converter-html SOURCES
+add_html_pages_library(NAME kraftfutterrechner-html SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/http_content/404.html
         ${CMAKE_CURRENT_SOURCE_DIR}/http_content/index.html
         ${CMAKE_CURRENT_SOURCE_DIR}/http_content/style.css
@@ -47,7 +46,7 @@ add_html_pages_library(NAME dcdc-converter-html SOURCES
 # ----------------------------------------------------------------------------
 # Executable
 # ----------------------------------------------------------------------------
-add_executable(dcdc-converter
+add_executable(kraftfutterrechner
         src/main.cpp
         src/dhcpserver.c
         src/dnsserver.c
@@ -55,24 +54,24 @@ add_executable(dcdc-converter
         src/ntp_client.cpp
         src/error_hooks.cpp
 )
-set_property(TARGET dcdc-converter PROPERTY CXX_STANDARD 23)
-target_compile_definitions(dcdc-converter PRIVATE
+set_property(TARGET kraftfutterrechner PROPERTY CXX_STANDARD 23)
+target_compile_definitions(kraftfutterrechner PRIVATE
         WIFI_SSID=\"${WIFI_SSID}\"
         WIFI_PASSWORD=\"${WIFI_PASSWORD}\"
 )
-target_include_directories(dcdc-converter PRIVATE
+target_include_directories(kraftfutterrechner PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-target_link_libraries(dcdc-converter
+target_link_libraries(kraftfutterrechner
         pico_stdlib
         pico_mbedtls
         hardware_flash
         pico_cyw43_arch_lwip_sys_freertos
         pico_lwip_mdns
         FreeRTOS-Kernel-Heap4 # FreeRTOS kernel and dynamic heap
-        dcdc-converter-html
+        kraftfutterrechner-html
 )
-pico_add_extra_outputs(dcdc-converter)
-pico_enable_stdio_usb(dcdc-converter 1)
-pico_enable_stdio_uart(dcdc-converter 0)
+pico_add_extra_outputs(kraftfutterrechner)
+pico_enable_stdio_usb(kraftfutterrechner 1)
+pico_enable_stdio_uart(kraftfutterrechner 0)
 
