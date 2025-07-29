@@ -135,8 +135,8 @@ struct kraftfutterstation {
 			scoped_lock lock{receive_mutex};
 			const auto &p = received_packages.back();
 			bool cow_in_station = p.ack_time > cow_request_time && p.halsband != 0;
-			halsband_ration *entry = !cow_in_station ? nullptr:
-				halsband_rationen | find{p.halsband, &halsband_ration::halsband};
+			halsband_ration *entry = cow_in_station && time_start - station_last_feeds[cur_station] > settings::Default().dispense_timeout * 1e6
+				? halsband_rationen | find{p.halsband, &halsband_ration::halsband} : nullptr;
 
 			if (cow_in_station) {
 				station_cur_cow[cur_station] = p.halsband;
@@ -155,12 +155,14 @@ struct kraftfutterstation {
 				entry->rations_count -= 1;
 				if (entry->rations_count <= 0)
 					halsband_rationen.remove(entry - halsband_rationen.begin());
+				station_last_feeds[cur_station] = time_start;
 				state = send_req_feed;
 			} 
 			if (state == await_ack_cow) {
 				station_cur_cow[cur_station] = 0;
 				state = send_req_p3;
 			}
+			return 0;
 		}
 		case send_req_feed:
 			send_buffer.fill(messages::req_feed.message);
@@ -184,6 +186,7 @@ struct kraftfutterstation {
 			else
 				uart_futterstationen::Default().puts(messages::req_p3_0.message);
 			cur_station = (cur_station + 1) % MAX_STATIONS;
+			state = send_req_p0;
 			return get_wait_time(messages::req_p3_0.timeout);
 		default: state = send_req_p0; return 0;
 		}

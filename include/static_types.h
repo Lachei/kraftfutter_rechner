@@ -51,7 +51,7 @@ struct static_string {
 	constexpr size_type size() const { return cur_size; }
 	constexpr void make_c_str_safe() { if (static_cast<uint32_t>(cur_size) < storage.size()) storage[cur_size] = '\0'; }
 	constexpr void sanitize() { if (cur_size > N || cur_size < 0) cur_size = 0; }
-	constexpr char& operator[](size_type T) { return storage[std::min(cur_size, N - 1)]; }
+	constexpr char& operator[](size_type i) { return storage[std::min(i, N - 1)]; }
 };
 
 template<typename T, int N, typename size_type = int>

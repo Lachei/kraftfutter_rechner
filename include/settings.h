@@ -6,6 +6,7 @@
 #include "json_helper.h"
 
 struct settings {
+	float dispense_timeout{};
 	int reset_times{1}; // at max 4
 	std::array<int, 3> reset_offsets{};
 	int rations{4};
@@ -17,8 +18,8 @@ struct settings {
 	/** @brief writes the settings struct as json to the static strig s */
 	template<int N>
 	constexpr int dump_to_json(static_string<N> &s) const {
-		return s.append_formatted(R"({{"reset_times":{},"reset_offsets":[{},{},{}],"rations":{}}})", 
-		     reset_times, reset_offsets[0], reset_offsets[1], reset_offsets[2], rations);
+		return s.append_formatted(R"({{"dispense_timeout":{},"reset_times":{},"reset_offsets":[{},{},{}],"rations":{}}})", 
+		     dispense_timeout, reset_times, reset_offsets[0], reset_offsets[1], reset_offsets[2], rations);
 	}
 	constexpr bool parse_from_json(std::string_view json) {
 		JSON_ASSERT(json.size() && json[0] == '{', "Invalid json, missing start of object");
@@ -28,15 +29,19 @@ struct settings {
 			JSON_ASSERT(key, "Error parsing the key");
 			JSON_ASSERT(json.size() && json[0] == ':', "Invalid json, missing ':' after key");
 			json = json.substr(1);
-			if (key == "reset_times") {
-				auto rt = parse_remove_json_double(json);
+			if (key == "dispense_timeout") {
+				std::optional<double> r = parse_remove_json_double(json);
+				JSON_ASSERT(r, "Error parsing dispense_timeout");
+				dispense_timeout = r.value();
+			} else if (key == "reset_times") {
+				std::optional<double> rt = parse_remove_json_double(json);
 				JSON_ASSERT(reset_times, "Error parsing reset_times");
 				reset_times = rt.value();
 			} else if (key == "reset_offsets") {
 				bool parsed = parse_remove_json_double_array(json, reset_offsets);
 				JSON_ASSERT(parsed, "Error parsing reset_offsets");
 			} else if (key == "rations") {
-				auto r = parse_remove_json_double(json);
+				std::optional<double> r = parse_remove_json_double(json);
 				JSON_ASSERT(r, "Error parsing rations");
 				rations = r.value();
 			} else {
@@ -53,6 +58,9 @@ struct settings {
 	}
 	constexpr bool sanitize() {
 		bool change{};
+		float dt = std::clamp(dispense_timeout == dispense_timeout ? dispense_timeout: .5f, .1f, 50.f);
+		change |= dt != dispense_timeout;
+		dispense_timeout = dt;
 		int rt = std::clamp(reset_times, 1, 3);
 		change |= rt != reset_times;
 		reset_times = rt;
@@ -70,6 +78,7 @@ struct settings {
 
 /** @brief prints formatted for monospace output, eg. usb */
 std::ostream& operator<<(std::ostream &os, const settings &s) {
+	os << "dispense_timeout " << s.dispense_timeout << '\n';
 	os << "reset_times " << s.reset_times << '\n';
 	os << "reset_offests " << s.reset_offsets[0] << ' ' << s.reset_offsets[1] << ' ' <<  s.reset_offsets[2] << '\n';
 	os << "rations " << s.rations << '\n';
@@ -80,19 +89,16 @@ std::ostream& operator<<(std::ostream &os, const settings &s) {
 std::istream& operator>>(std::istream &is, settings &s) {
 	std::string key;
 	is >> key;
-	if (key != "reset_times")
-		goto fail;
-	is >> s.reset_times >> key;
-	if (key != "reset_offsets")
-		goto fail;
-	is >> s.reset_offsets[0] >> s.reset_offsets[1] >> s.reset_offsets[2] >> key;
-	if (key != "rations")
-		goto fail;
-	is >> s.rations;
+	if (key == "dispense_timeout")
+		is >> s.dispense_timeout;
+	else if (key == "reset_times")
+		is >> s.reset_times;
+	else if (key == "reset_offsets")
+		is >> s.reset_offsets[0] >> s.reset_offsets[1] >> s.reset_offsets[2];
+	else if (key != "rations")
+		is >> s.rations;
+	else
+		is.setstate(std::ios_base::failbit);
 	return is;
-fail:
-	is.setstate(std::ios_base::failbit);
-	return is;
-
 }
 

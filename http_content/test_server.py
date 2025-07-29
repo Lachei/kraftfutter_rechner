@@ -116,7 +116,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
-            self.wfile.write(f"{{\"reset_times\":1,\"reset_offsets\":[1,10,17],\"rations\":5}}".encode())
+            self.wfile.write(f"{{\"dispense_timout\":.5,\"reset_times\":1,\"reset_offsets\":[1,10,17],\"rations\":5}}".encode())
         elif self.path == '/last_feeds':
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
