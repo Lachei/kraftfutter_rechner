@@ -41,9 +41,10 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		out << "    Prints the status of the iot device, including measurement values, setting values, error state, wifi status\n\n";
 		out << "  set ${variable} ${value}\n";
 		out << "    Set the value of a variable. Available variables are:\n";
-		out << "      Variable1\n";
-		out << "      Variable2\n";
-		out << "      Variable3\n\n";
+		out << "      dispense_timeout\n";
+		out << "      reset_times\n";
+		out << "      reset_offsets\n";
+		out << "      rations\n\n";
 		out << "  enable_wifi\n";
 		out << "    Activate wifi on the device\n\n";
 		out << "  disable_wifi\n";
@@ -51,7 +52,7 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		out << "  enable_ap\n";
 		out << "    Activate the acces point on the device (also activates wifi if disabled)\n\n";
 		out << "  disable_ap\n";
-		out << "    Disable the acces point on the device (leafs the other wifi untouched)\n\n";
+		out << "    Disable the acces point on the device (leaves the other wifi untouched)\n\n";
 		out << "  connect_wifi ${ssid} ${password}\n";
 		out << "    Store the wifi credentials for a certain ssid and connect if its available\n\n";
 		out << "  set_log_level (info|warning|error|fatal)\n";

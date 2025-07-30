@@ -81,11 +81,12 @@ struct kraftfutterstation {
 			{
 				scoped_lock lock{receive_mutex};
 				uint64_t del_pack_start = receive_time - received_packages.back().ack_time;
-				static constexpr uint64_t max_package_del = 8000;
+				static constexpr uint64_t max_package_del = 40000;
 				timeout = del_pack_start > max_package_del;
 			}
 			if (data == 0x6) {
 				pos_after_ack = 0;
+				LogInfo("Recieved ACK package");
 				scoped_lock lock{receive_mutex};
 				received_packages.push({.ack_time = receive_time});
 			}
