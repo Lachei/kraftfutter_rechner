@@ -140,6 +140,7 @@ struct kraftfutterstation {
 
 			if (cow_in_station) {
 				station_cur_cow[cur_station] = p.halsband;
+				LogInfo("Cow {} in station {}", p.halsband, cur_station);
 			}
 			if (cow_in_station && !entry) {
 				// try fetch new ration
@@ -147,15 +148,12 @@ struct kraftfutterstation {
 				if (amount > (1.f / RATIONS_PER_KG) && (entry = halsband_rationen.push())) {
 					entry->halsband = p.halsband;
 					entry->rations_count = amount * RATIONS_PER_KG;
+					LogInfo("Cow {} now has {} rations", p.halsband, entry->rations_count);
 				} else
-					LogError("Cow with number {} could not be fed, kg: {}", p.halsband, amount);
+					LogError("Cow with halsband {} could not be fed, kg: {}", p.halsband, amount);
 			}
 			if (entry) {
 				// dispense previously fetched rations
-				entry->rations_count -= 1;
-				if (entry->rations_count <= 0)
-					halsband_rationen.remove(entry - halsband_rationen.begin());
-				station_last_feeds[cur_station] = time_start;
 				state = send_req_feed;
 			} 
 			if (state == await_ack_cow) {
@@ -174,8 +172,15 @@ struct kraftfutterstation {
 		case await_ack_feed: {
 			scoped_lock lock{receive_mutex};
 			const auto &p = received_packages.back();
+			halsband_ration *entry = p.ack_time > cow_request_time 
+				? halsband_rationen | find{p.halsband, &halsband_ration::halsband}: nullptr;
 			// only remove the cow if the feed was successfull
-			if (p.ack_time > cow_request_time) {
+			if (entry) {
+				LogInfo("Feeding a ration {} in station {}", p.halsband, cur_station);
+				entry->rations_count -= 1;
+				if (entry->rations_count <= 0)
+					halsband_rationen.remove(entry - halsband_rationen.begin());
+				station_last_feeds[cur_station] = time_start;
 			}
 			state = send_req_p3;
 			return 0;
