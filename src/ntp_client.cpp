@@ -88,6 +88,7 @@ void ntp_client::update_time() {
     }
 }
 
+/* @brief returns time in seconds since epoch */
 time_t ntp_client::get_time_since_epoch() {
     return ntp_time + (time_us_64() / 1000000u) - local_time;
 }

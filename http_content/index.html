@@ -17,6 +17,28 @@
 		async function gd(){try{let t=await fetch("time");t0=parseInt(await t.text());tu=(new Date()).getTime()/1000;}catch(e){t0=0;}}
 		function st(){if(t0==0)throw new Error("Nicht synchronisiert");return new Date(t0*1000+(new Date()).getTime()-tu*1000);}
 		async function pd(){;if(t0==0){td.innerHTML='&#x1f550; Nicht synchronisiert';return;}td.innerHTML='&#x1f550;'+st().toLocaleString();}
+		async function sp(a,b,m="PUT"){
+			loading.classList.add('show');
+			success.classList.remove('show');
+			error.classList.remove('show');
+			for(let i=0; i<10; ++i){
+				try {
+					let t=await fetch(a, {method:m,body:b});
+					if(!t.ok)
+						throw new Error(response.status);
+					loading.classList.remove('show');
+					success.classList.add('show');
+					setTimeout(() => { success.classList.remove('show'); }, 2000);
+					return await t.text();
+				} catch(e) {
+					console.error(e.message);
+				}
+			}
+			loading.classList.remove('show');
+			error.classList.add('show');
+			setTimeout(() => { error.classList.remove('show'); }, 2000);
+			throw new Error("Could not put " + a);
+		}
 		</script>
 		<meta charset="utf-8"><title>Kraftfutterrechner</title><link rel="stylesheet" href="style.css" onload="de('u').src='overview.html'">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -39,10 +61,16 @@
 				<iframe id="i" class="tp" onload="as(this);ol();"></iframe>
 			</div
 		</div>
+		<div id="success" class="banner success">Erfolgreich!</div>
+		<div id="error" class="banner error">Fehlschlag!</div>
+		<div id="loading" class="banner loading-banner"> Speichern <div class="loading-symbol"></div> </div>
 		<script>
-		var v=de('v');
-		var lie=de('li');
-		var td=de('td');
+		var v=de('v'),
+		lie=de('li'),
+		td=de('td'),
+		loading=de('loading'),
+		success=de('success'),
+		error=de('error');
 		for(let a of d.getElementsByClassName("t")){a.onclick=()=>{d.querySelectorAll('.s')[0].classList.remove('s');let x=de(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"}); p=a.classList[1];if(a.classList[1] in m)m[a.classList[1]]();a.classList.add('s');};};
 		window.onresize=()=>{let x=de(p).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x});}
 		setInterval(cu, 10000);

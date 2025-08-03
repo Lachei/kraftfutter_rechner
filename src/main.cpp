@@ -47,6 +47,20 @@ void kraftfutter_send_task(void *) {
     }
 }
 
+void check_problematic_cows_task(void *) {
+    LogInfo("Starting p1oblematic cows task");
+    for (;;) {
+        LogInfo("Updating problematic cows");
+        // if not yet time synchronized rerun earlier
+        if (ntp_client::Default().ntp_time == 0) {
+            vTaskDelay(1000);
+            continue;
+        }
+        kuhspeicher::Default().check_for_problematic_cows();
+        vTaskDelay(5000);
+    }
+}
+
 void wifi_search_task(void *) {
     LogInfo("Wifi task started");
     if (wifi_storage::Default().ssid_wifi.empty()) // only start the access point by default if no normal wifi connection is set
@@ -103,7 +117,7 @@ void startup_task(void *) {
     kuhspeicher::Default().reload_last_feeds();
     LogInfo("Loading last feeds done");
     LogInfo("Initialization done");
-    // singleton initiliazation ()
+    // singleton initiliazations...
     uart_futterstationen::Default();
     kraftfutterstation<>::Default();
     static_format<128>("");
@@ -113,15 +127,19 @@ void startup_task(void *) {
     TaskHandle_t task_usb_comm{};
     TaskHandle_t task_update_wifi{};
     TaskHandle_t task_recieve{};
+    TaskHandle_t task_problematic_cows{};
     auto err = xTaskCreate(usb_comm_task, "usb_comm", 512, NULL, 0, &task_usb_comm);	// usb task also has to be started only after cyw43 init as some wifi functions are available
     if (err != pdPASS)
         LogError("Failed to start usb communication task with code {}" ,err);
     err = xTaskCreate(wifi_search_task, "UpdateWifiThread", 512, NULL, 0, &task_update_wifi);
     if (err != pdPASS)
         LogError("Failed to start usb communication task with code {}" ,err);
-    err = xTaskCreate(recieve_task, "UartRecTask", 128, NULL, 0, &task_recieve);
+    err = xTaskCreate(recieve_task, "UartRecTask", 512, NULL, 0, &task_recieve);
     if (err != pdPASS)
         LogError("Failed to start uart recieve task 1 with code {}" ,err);
+    err = xTaskCreate(check_problematic_cows_task, "ProbCows", 512, NULL, 0, &task_problematic_cows);
+    if (err != pdPASS)
+        LogError("Failed to start problematic cows task with code {}" ,err);
 
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
     kraftfutter_send_task(nullptr);

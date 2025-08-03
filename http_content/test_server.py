@@ -3,9 +3,9 @@ import http.server
 import socketserver
 import os
 import json
-import time
 import string
 import random
+import time
 
 parser = argparse.ArgumentParser(
                     prog='TestIotServer',
@@ -25,12 +25,15 @@ def get_random_feed():
     s = random.randrange(1, 5)
     return {'n':n,'s':s, 't':get_time_m()}
 
+def wait():
+    time.sleep(1)
+
 log_counter = 0
 login_counter = 0
 hostname = "A beatiful thing"
 ap_active = "true"
-cows = {'Gerta':{'name':'Gerta','ohrenmarke':'DEGerta','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':get_time_m(),'letzte_fuetterungen':['2:'+str(get_time_m() - 20)]}, 
-        'Biene':{'name':'Biene','ohrenmarke':'DEBiene','halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':get_time_m()-24*60,'letzte_fuetterungen':['2:'+str(get_time_m() - 110)]}}
+cows = {'Gerta':{'name':'Gerta','knr':50,'halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':get_time_m(),'letzte_fuetterungen':['2:'+str(get_time_m() - 20)]}, 
+        'Biene':{'name':'Biene','knr':200,'halsbandnr':10,'kraftfuttermenge':1.2,'abkalbungstag':get_time_m()-24*60,'letzte_fuetterungen':['2:'+str(get_time_m() - 110)]}}
 last_feeds = [{'n':'a cow','s':2,'t':get_time_m()},
               {'n':'another cow','s':1,'t':get_time_m()},
               {'n':'be cow','s':3,'t':get_time_m()},
@@ -91,7 +94,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         elif self.path == '/cow_names':
             res = {'cows_size':len(cows), 'cow_names':[]}
             for cow in cows:
-                res['cow_names'].append(cow)
+                res['cow_names'].append(str(cows[cow]['knr']).rjust(5, ' ') + ": " + cow)
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
@@ -116,7 +119,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
-            self.wfile.write(f"{{\"dispense_timout\":.5,\"reset_times\":1,\"reset_offsets\":[1,10,17],\"rations\":5}}".encode())
+            self.wfile.write(f"{{\"dispense_timout\":0.5,\"reset_times\":1,\"reset_offsets\":[1,10,17],\"rations\":5}}".encode())
         elif self.path == '/last_feeds':
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
@@ -185,6 +188,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.end_headers()
         elif self.path == '/setting':
+            wait()
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()

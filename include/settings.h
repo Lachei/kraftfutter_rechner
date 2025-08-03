@@ -8,7 +8,7 @@
 struct settings {
 	float dispense_timeout{};
 	int reset_times{1}; // at max 4
-	std::array<int, 3> reset_offsets{};
+	std::array<int, 3> reset_offsets{}; // minutes since 12 o'clock
 	int rations{4};
 
 	static settings& Default() {
@@ -65,7 +65,7 @@ struct settings {
 		change |= rt != reset_times;
 		reset_times = rt;
 		for (int &t: reset_offsets) {
-			int tmp = std::clamp(t, 0, 24);
+			int tmp = std::clamp(t, 0, 24 * 60);
 			change |= tmp != t;
 			t = tmp;
 		}

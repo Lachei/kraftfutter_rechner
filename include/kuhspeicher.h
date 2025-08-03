@@ -6,6 +6,24 @@
 #include "ntp_client.h"
 #include "settings.h"
 
+#define LOG_ASSERT(x, msg) if (!x) LogError(msg);
+
+enum struct problem: uint8_t {
+	NOT_FED_SINCE_12_HOURS = 0,
+	NOT_FED_SINCE_24_HOURS,
+	NOT_FED_SINCE_48_HOURS,
+	NEVER_FED,
+};
+constexpr std::string_view to_string(problem p) {
+	switch (p) {
+		case problem::NOT_FED_SINCE_12_HOURS: return "Kuh hat seit 12 Stunden kein Kraftfutter";
+		case problem::NOT_FED_SINCE_24_HOURS: return "Kuh hat seit 1 Tag kein Kraftfutter";
+		case problem::NOT_FED_SINCE_48_HOURS: return "Kuh hat seit 2 Tagen kein Kraftfutter";
+		case problem::NEVER_FED: return "Kuh hatte noch nie Kraftfutter";
+	}
+	return "Unbekanntes problem";
+}
+
 struct kuhspeicher {
 	using iota = std::ranges::iota_view<size_t, size_t>;
 	static kuhspeicher& Default() {
@@ -16,6 +34,9 @@ struct kuhspeicher {
 	kuh cow{};
 	struct last_feed { uint8_t cow_idx{}, feed_idx{}; };
 	static_ring_buffer<last_feed, 64, uint8_t> last_feeds{};
+	struct problematic_cow { uint8_t cow_idx{}; problem prob{};};
+	static_vector<problematic_cow, 256, uint8_t> problematic_cows{};
+	bool request_problematic_cow_update{true};
 
 	int cows_size() const { return std::clamp(persistent_storage_t::Default().view(&persistent_storage_layout::cows_size), 0, MAX_COWS); }
 	std::span<kuh> cows_view() const { return persistent_storage_t::Default().view(&persistent_storage_layout::cows, 0, cows_size()); }
@@ -42,6 +63,42 @@ struct kuhspeicher {
 						break;
 					std::swap(last_feeds[i], last_feeds[j]);
 				}
+			}
+		}
+	}
+
+	void check_for_problematic_cows() {
+		if (!request_problematic_cow_update)
+			return;
+		request_problematic_cow_update = false;
+		// always rebuilds the problematic cows vector
+		problematic_cows.clear();
+		std::span<kuh> cows{cows_view()};
+		time_t cur_mins = ntp_client::Default().get_time_since_epoch() / 60;
+		for (const auto &cow: cows) {
+			if (cow.halsbandnr == 0)
+				continue;
+			uint8_t i = uint8_t(&cow - cows.data());
+			if (cow.letzte_fuetterungen.empty()) {
+				LOG_ASSERT(problematic_cows.push({.cow_idx = i, .prob = problem::NEVER_FED}),
+					   "Failed to add problematic cow never fed");
+				continue;
+			} 
+			float delta_hours = float(cur_mins - cow.letzte_fuetterungen.back().timestamp) / 60.f;
+			if (delta_hours >= 48.f) {
+				LOG_ASSERT(problematic_cows.push({.cow_idx = i, .prob = problem::NOT_FED_SINCE_48_HOURS}),
+					   "Failed to add problematic cow 48h");
+				continue;
+			}
+			if (delta_hours >= 24.f) {
+				LOG_ASSERT(problematic_cows.push({.cow_idx = i, .prob = problem::NOT_FED_SINCE_24_HOURS}),
+					   "Failed to add problematic cow 24h");
+				continue;
+			}
+			if (delta_hours >= 12.f) {
+				LOG_ASSERT(problematic_cows.push({.cow_idx = i, .prob = problem::NOT_FED_SINCE_12_HOURS}),
+					   "Failed to add problematic cow 12h");
+				continue;
 			}
 		}
 	}
@@ -83,20 +140,22 @@ struct kuhspeicher {
 				return -2;
 			}
 			const auto &s = settings::Default();
-			int reset_hour = s.reset_offsets[0];
-			int reset_hour_after = s.reset_times > 1? s.reset_offsets[1]: reset_hour;
-			for (int i = 1; i < s.reset_times && s.reset_offsets[i] < time->tm_hour; ++i) {
-				reset_hour = s.reset_offsets[i];
-				reset_hour_after = s.reset_offsets[(i + 1) % s.reset_times];
+			int minute = time->tm_hour * 60 + time->tm_min;
+			int reset_minute = s.reset_offsets[0];
+			int reset_minute_after = s.reset_times > 1? s.reset_offsets[1]: reset_minute;
+			for (int i = 1; i < s.reset_times && s.reset_offsets[i] < minute; ++i) {
+				reset_minute = s.reset_offsets[i];
+				reset_minute_after = s.reset_offsets[(i + 1) % s.reset_times];
 			}
-			int res_del = reset_hour_after - reset_hour;
+			int res_del = reset_minute_after - reset_minute;
 			if (res_del <= 0)
-				res_del += 24;
-			time->tm_hour = reset_hour;
-			time->tm_min = time->tm_sec = 0;
+				res_del += 24 * 60;
+			time->tm_hour = reset_minute / 60;
+			time->tm_min = reset_minute % 60;
+			time->tm_sec = 0;
 			time_t start_time = mktime(time) / 60;
 			time_t mins = secs / 60;
-			int expected_feeds = int(((mins - start_time) / 60.f) / (float(res_del) / float(s.rations))) + 1;
+			int expected_feeds = int(((mins - start_time)) / (float(res_del) / float(s.rations))) + 1;
 			if (expected_feeds < 0) {
 				LogError("Expected feeds is negative");
 				return -2;
@@ -142,6 +201,7 @@ struct kuhspeicher {
 			dst = s;
 		}
 		err_t res = persistent_storage_t::Default().write_array_range(&cow, &persistent_storage_layout::cows, dst, dst + 1);
+		request_problematic_cow_update = true;
 		LogInfo("Cow {} written with result: {}", cow.name.sv(), res);
 		return true;
 	}
@@ -204,11 +264,10 @@ struct kuhspeicher {
 				auto name = parse_remove_json_string(json);
 				JSON_ASSERT(name, "Error parsing the cow name");
 				cow.name.fill(name.value());
-			} else if (key == "ohrenmarke") {
-				auto id = parse_remove_json_string(json);
-				JSON_ASSERT(id, "Error parsing ohrenmarke");
-				JSON_ASSERT(id.value().size() == 12, "Ohrenmarke must have 12 digits");
-				id.value().copy(cow.ohrenmarke.data(), 12);
+			} else if (key == "knr") {
+				auto knr = parse_remove_json_double(json);
+				JSON_ASSERT(knr, "Error parsing knr");
+				cow.knr = static_cast<int>(knr.value());
 			} else if (key == "halsbandnr") {
 				auto halsband = parse_remove_json_double(json);
 				JSON_ASSERT(halsband, "Failed parsing halband");
@@ -233,11 +292,13 @@ struct kuhspeicher {
 		}
 		// checking for valid cow info
 		JSON_ASSERT(cow.name.size(), "Missing cow name");
-		JSON_ASSERT(cow.ohrenmarke[0] != 0, "Ohrenmarke not set");
-		JSON_ASSERT(cow.halsbandnr != 0, "Halsbandnr is 0");
+		JSON_ASSERT(cow.knr != 0, "Knr is 0");
+		JSON_ASSERT(cow.halsbandnr >= 0, "Halsbandnr is < 0");
 		JSON_ASSERT(cow.kraftfuttermenge != 0, "Kraftfuttermenge is 0");
 		JSON_ASSERT(cow.abkalbungstag != 0, "Abkalbungstag is 0");
 		return &cow;
 	}
 };
+
+#undef LOG_ASSERT
 

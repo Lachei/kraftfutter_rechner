@@ -30,7 +30,7 @@
   ft.innerHTML=tm;
   let pes=await fetch("problematic_cows");pes=await pes.json();
   tm=pc.firstChild.firstChild.outerHTML;
-  for(let pe of pes)tm+="<tr><td>"+pe.n+"</td><td>"+pe.m+"</td></tr>";
+  for(let pe of pes)tm+="<tr><td>"+pe[0]+"</td><td>"+pe[1]+"</td></tr>";
   pc.innerHTML=tm;
   if(!dl.hasAttribute("open"))return;
   let logs=await fetch("logs", {signal: AbortSignal.timeout(500)});

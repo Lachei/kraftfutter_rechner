@@ -17,12 +17,12 @@ constexpr int MAX_COWS{256};
 
 struct feed_entry {
 	uint8_t station:2 {};
-	uint32_t timestamp: 30{}; // the timestamp
+	uint32_t timestamp: 30{}; // timestamp in minutes since start of epoch 1970
 };
 
 struct kuh {
 	static_string<15, uint8_t> name;
-	std::array<char, 12> ohrenmarke;
+	int knr;
 	int halsbandnr;
 	float kraftfuttermenge;
 	uint32_t abkalbungstag;

@@ -224,9 +224,7 @@ tcp_server_typed& Webserver() {
 		for (const auto &cow: cows) {
 			if (&cow != cows.data())
 				res.buffer.append(',');
-			res.buffer.append('"');
-			res.buffer.append(cow.name.sv());
-			res.buffer.append('"');
+			res.buffer.append_formatted(R"("{:5}: {}")", cow.knr, cow.name.sv());
 		}
 		res.res_write_body("]}");
 		
@@ -263,8 +261,8 @@ tcp_server_typed& Webserver() {
 		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
 		res.res_write_body();
 		int content_length = res.buffer.append_formatted(
-			R"({{"name":"{}","ohrenmarke":"{}","halsbandnr":{},"kraftfuttermenge":{},"abkalbungstag":{},"letzte_fuetterungen":[)", 
-			cow->name.sv(), array_to_sv(cow->ohrenmarke), cow->halsbandnr, cow->kraftfuttermenge, cow->abkalbungstag
+			R"({{"name":"{}","knr":{},"halsbandnr":{},"kraftfuttermenge":{},"abkalbungstag":{},"letzte_fuetterungen":[)", 
+			cow->name.sv(), cow->knr, cow->halsbandnr, cow->kraftfuttermenge, cow->abkalbungstag
 		);
 		for (const auto &feed_entry: cow->letzte_fuetterungen) {
 			if (&feed_entry != &cow->letzte_fuetterungen[0]) {
@@ -392,8 +390,20 @@ tcp_server_typed& Webserver() {
 	const auto problematic_cows = [](const tcp_server_typed::message_buffer &req, tcp_server_typed::message_buffer &res) {
 		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
 		res.res_add_header("Server", DEFAULT_SERVER);
-		res.res_add_header("Content-Length", "2");
-		res.res_write_body("[]");
+		auto length_hdr = res.res_add_header("Content-Length", "        ").value; // at max 8 chars for size
+		int content_length{2}; // outer square brackets of json array
+		res.res_write_body("[");
+		std::span<kuh> cows = kuhspeicher::Default().cows_view();
+		for (const auto &[cow, problem]: kuhspeicher::Default().problematic_cows) {
+			if (content_length != 2) {
+				res.res_write_body(",");
+				content_length += 1;
+			}
+			content_length += res.buffer.append_formatted(R"(["{}","{}"])", cows[cow].name.sv(), to_string(problem));
+		}
+		res.res_write_body("]");
+		if (0 == format_to_sv(length_hdr, "{}", content_length))
+			LogError("Failed to write header length");
 	};
 
 	static tcp_server_typed webserver{

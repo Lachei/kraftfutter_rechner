@@ -31,4 +31,44 @@ td{text-align:center;}
 .li{display:none;}
 .fr{float:right;}
 .cs{margin:.5rem;padding:.2rem;}
-
+.di{width:12rem;}
+.loading-symbol {
+	border: 4px solid #f3f3f3;
+	border-top: 4px solid #3498db;
+	border-radius: 50%;
+	width: 30px;
+	height: 30px;
+	animation: spin 2s linear infinite;
+	margin: 0 auto;
+	float:left;
+}
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+.banner {
+	padding: 10px;
+	border-radius:20px;
+	text-align: center;
+	color: white;
+	position: fixed;
+	bottom: 0;
+	width: 50%;
+	box-sizing: border-box;
+	margin-left: 25%;
+	margin-bottom: 5px;
+	height: 60px;
+	font-size: 30px;
+	opacity: 0;
+	transition: opacity 0.5s ease-in-out;
+}
+.banner.show{opacity:1}
+.success {
+	background-color: #4CAF50;
+}
+.error {
+	background-color: #f44336;
+}
+.loading-banner {
+	background-color: #3498db;
+}
