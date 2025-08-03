@@ -9,7 +9,7 @@
 <p class="d"><input id="t3" type="time" value="16:00" onchange="st()"><label for="t3">Uhr, Rationsneustart 3</label>
 <p><button onclick="if(tt<3){++tt;ur();st();}">+ Rationsneustart</button> <button onclick="if(tt>1){tt--;ur();st();}">- Rationsneustart</button>
 <p><input id="ra" type="number" value="4" min="1" max="5" onchange="st();"><label for="ra">Rationen</label>
-<p><input id="dt" type="number" value=".5" min=".1" max="50" onchange="st();"><label for="dt">Auswurfzwischenzeit</label>
+<p><input id="dt" type="number" value=".5" min=".1" max="50" onchange="st();"><label for="dt">Auswurfzwischenzeit in Sekunden</label>
 <h4>Kuheinstellungen</h4>
 <div style="margin-left:10px">
 <p><input id="kn" class="di"><label for="kn">Kuhname</label>
@@ -35,6 +35,7 @@ function ac(s,c){return s+"<details id=\""+c+"\" ontoggle='kd(this);'><summary>"
 function htom(h){return h.split(':')[0]*60+ +h.split(':')[1];}
 async function st(){await parent.sp("setting",JSON.stringify({dispense_timeout:+(dt.value.replace(',','.')),reset_times:tt,reset_offsets:[htom(t1.value),htom(t2.value),htom(t3.value)],rations:+ra.value}));}
 async function kl(o){let op=o.hasAttribute("open"),cs=1;
+	while(o.childNodes.length>1)o.removeChild(o.lastChild);
 	for(let cc=0;cc<cs;){
 		let cl=await fetch("cow_names");
 		cl=await cl.json();

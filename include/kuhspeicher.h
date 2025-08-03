@@ -275,7 +275,7 @@ struct kuhspeicher {
 			} else if (key == "kraftfuttermenge") {
 				auto kraftfutter = parse_remove_json_double(json);
 				JSON_ASSERT(kraftfutter, "Failed parsing kraftfutter menge");
-				cow.kraftfuttermenge = static_cast<int>(kraftfutter.value());
+				cow.kraftfuttermenge = static_cast<float>(kraftfutter.value());
 			} else if (key == "abkalbungstag") {
 				auto abkalbungstag = parse_remove_json_double(json);
 				JSON_ASSERT(abkalbungstag, "Failed parsing abkalbungstag");
