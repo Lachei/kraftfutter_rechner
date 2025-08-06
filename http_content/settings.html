@@ -22,17 +22,17 @@
 </div></div></body><script>
 function de(e){return document.getElementById(e);}function qa(e){return document.querySelectorAll(e);}
 var kli=de("kli"),kn=de("kn"),knr=de("knr"),hn=de("hn"),km=de("km"),ab=de("ab"),pw1=de("pw1"),pw2=de("pw2"),e=de("e"),lis=qa(".li"),los=qa(".lo"),tt=1,t1=de("t1"),t2=de("t2"),t3=de("t3"),ra=de("ra"),dt=de("dt"),f=1;
+function htom(h){return h.split(':')[0]*60+ +h.split(':')[1] + new Date().getTimezoneOffset();}
+function mtoh(m){m-= new Date().getTimezoneOffset();return Math.floor(m/60).toString().padStart(2,'0')+':'+(m%60).toString().padStart(2,'0');}
 async function uc(){let c={name:kn.value,knr:+knr.value,halsbandnr:Number(hn.value),kraftfuttermenge:Number(km.value.replace(',','.')),abkalbungstag:new Date(ab.value).getTime()/60000};
 await parent.sp("cow_entry",JSON.stringify(c));let ns=c.knr.toString().padStart(5,' ')+': '+c.name;let o=de(ns);if(o)o.remove();kli.innerHTML=ac(kli.innerHTML,ns);s(kli);}
 parent.accb.push(async (l)=>{if(l){lis.forEach(e=>e.style.display="block");los.forEach(e=> e.style.display="none");await ls();}else{lis.forEach(e=>e.style.display="none");los.forEach(e=>e.style.display="block");};});
 async function ls(){if(!f)return;f=0;let t=await fetch("setting");
-	t=await t.json();tt=t.reset_times;[t1.value,t2.value,t3.value]=t.reset_offsets.map(
-		x=>{return Math.floor(x/60).toString().padStart(2,'0')+':'+(x%60).toString().padStart(2,'0');});
+	t=await t.json();tt=t.reset_times;[t1.value,t2.value,t3.value]=t.reset_offsets.map(x=>mtoh(x));
 	ra.value=t.rations;dt.value=t.dispense_timeout;ur();}
 function vi(e,v){if(v)e.parentNode.classList.remove('d');else e.parentNode.classList.add('d');}
 function ur(){vi(t1,tt>=1);vi(t2,tt>=2);vi(t3,tt>=3);}
 function ac(s,c){return s+"<details id=\""+c+"\" ontoggle='kd(this);'><summary>"+c+"<href class='fr er' onclick='dp(\""+c+"\",event);'>&#128465;</href></summary></details>";}
-function htom(h){return h.split(':')[0]*60+ +h.split(':')[1];}
 async function st(){await parent.sp("setting",JSON.stringify({dispense_timeout:+(dt.value.replace(',','.')),reset_times:tt,reset_offsets:[htom(t1.value),htom(t2.value),htom(t3.value)],rations:+ra.value}));}
 async function kl(o){let op=o.hasAttribute("open"),cs=1;
 	while(o.childNodes.length>1)o.removeChild(o.lastChild);
@@ -54,7 +54,7 @@ async function kd(o){
 if(o.children.length > 1) return;
 let n=o.firstChild.innerHTML.split('<')[0].split(':')[1].trim(),t=await fetch("cow_entry/"+n);t=await t.json();t.abkalbungstag*=60000;
 	let lf="<div style='max-height:3rem;overflow:scroll'>"+t.letzte_fuetterungen.map(e=>{let t=e.split(":");return t[0]+":"+new Date(+t[1]*60000).toLocaleString();}).join('<br>')+"</div>";
-	o.innerHTML+="<table class='cs tw'>"+tr("Kuhname",t.name)+tr("Kuhnummer",t.knr)+tr("Halsbandnr",t.halsbandnr)+tr("Kraftfutter in kg","<input type='number' min='0' max='7' step='0.1' value='"+t.kraftfuttermenge+"' onchange='sf(\""+t.name+"\",this.value);'>")+tr("Abkalbedatum",new Date(t.abkalbungstag).toLocaleDateString())+tr("Letzte Fütterungen",lf)+"</table><button onclick='kn.value=\""+t.name+"\";knr.value=\""+t.knr+"\";hn.value="+t.halsbandnr+";km.value="+t.kraftfuttermenge+";ab.valueAsDate=new Date("+t.abkalbungstag+");this.parentNode.removeAttribute(\"open\");window.scrollTo(0,0)'>Editieren</button>";
+	o.innerHTML+="<table class='cs tw'>"+tr("Kuhname",t.name)+tr("Kuhnummer",t.knr)+tr("Halsbandnr",t.halsbandnr)+tr("Kraftfutter in kg","<input type='number' min='0' max='7' step='0.1' value='"+t.kraftfuttermenge+"' onchange='sf(\""+t.name+"\",this.value);'>")+tr("Abkalbedatum",new Date(t.abkalbungstag).toLocaleDateString())+tr("Letzte Fütterungen",lf)+"</table><button onclick='kn.value=\""+t.name+"\";knr.value=\""+t.knr+"\";hn.value="+t.halsbandnr+";km.value="+t.kraftfuttermenge+";ab.valueAsDate=new Date("+t.abkalbungstag+");this.parentNode.removeAttribute(\"open\");window.scrollTo(0,0)'>Bearbeiten</button>";
 	o.ontoggle=()=>{};
 }
 async function s(e){

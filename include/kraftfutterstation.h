@@ -30,7 +30,7 @@ struct kraftfutterstation {
 		constexpr static message_timeout 
 			req_p0 = {"`RR",60000},
 			req_p1 = {"aRR",60000},  // req_p1,
-			req_p2 = {"@R\u0004V", 80000}, // req_p2 as template replace @,
+			req_p2 = {"@R\u0004V", 85000}, // req_p2 as template replace @,
 			req_feed = {"@S1\u0004\u0008", 60000}, // req_f template for feeed, replace @ with the corerct
 			req_p3_0 = {"\u00011\u00045", 70000}, // req_p3_0
 			req_p3_1 = {"\u00111\u00045", 70000}; // req_p3_1

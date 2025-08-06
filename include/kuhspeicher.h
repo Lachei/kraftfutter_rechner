@@ -8,6 +8,8 @@
 
 #define LOG_ASSERT(x, msg) if (!x) LogError(msg);
 
+constexpr time_t A_DAY = 24 * 60;
+
 enum struct problem: uint8_t {
 	NOT_FED_SINCE_12_HOURS = 0,
 	NOT_FED_SINCE_24_HOURS,
@@ -124,6 +126,15 @@ struct kuhspeicher {
 
 	// returns the fed kilogram of kraftfutter, returns 0 if nothing was fed, -1 if cow was not found, -2 if time issues arose
 	float feed_cow(int necklace_number, int station) {
+		const auto in_window = [](time_t s, time_t t, time_t e) {
+			if (e >= s) {
+				if (t < e)
+					t += A_DAY;
+				e += A_DAY;
+			}
+			return s <= t && t < e;
+		};
+
 		std::span<kuh> cows{cows_view()};
 		for (kuh &c: cows) {
 			if (c.halsbandnr != necklace_number)
@@ -141,21 +152,21 @@ struct kuhspeicher {
 			}
 			const auto &s = settings::Default();
 			int minute = time->tm_hour * 60 + time->tm_min;
-			int reset_minute = s.reset_offsets[0];
-			int reset_minute_after = s.reset_times > 1? s.reset_offsets[1]: reset_minute;
-			for (int i = 1; i < s.reset_times && s.reset_offsets[i] < minute; ++i) {
+			int reset_minute = s.reset_offsets[std::max(s.reset_times - 1, 0)];
+			int reset_minute_after = s.reset_offsets[0];
+			for (int i = 0; i < s.reset_times - 1 && !in_window(reset_minute, minute, reset_minute_after) ; ++i) {
 				reset_minute = s.reset_offsets[i];
 				reset_minute_after = s.reset_offsets[(i + 1) % s.reset_times];
 			}
 			int res_del = reset_minute_after - reset_minute;
 			if (res_del <= 0)
-				res_del += 24 * 60;
+				res_del += A_DAY;
 			time->tm_hour = reset_minute / 60;
 			time->tm_min = reset_minute % 60;
 			time->tm_sec = 0;
 			time_t start_time = mktime(time) / 60;
 			time_t mins = secs / 60;
-			int expected_feeds = int(((mins - start_time)) / (float(res_del) / float(s.rations))) + 1;
+			int expected_feeds = int((mins - start_time) / float(res_del) * float(s.rations)) + 1;
 			if (expected_feeds < 0) {
 				LogError("Expected feeds is negative");
 				return -2;

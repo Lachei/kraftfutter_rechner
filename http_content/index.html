@@ -73,6 +73,7 @@
 		error=de('error');
 		for(let a of d.getElementsByClassName("t")){a.onclick=()=>{d.querySelectorAll('.s')[0].classList.remove('s');let x=de(a.classList[1]).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x,behavior:"smooth"}); p=a.classList[1];if(a.classList[1] in m)m[a.classList[1]]();a.classList.add('s');};};
 		window.onresize=()=>{let x=de(p).getBoundingClientRect().x+v.scrollLeft-v.getBoundingClientRect().x;v.scrollTo({left:x});}
+		history.scrollRestoration = 'manual';
 		setInterval(cu, 10000);
 		setInterval(gd, 10000);
 		setInterval(pd, 1000);
