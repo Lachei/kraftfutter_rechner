@@ -310,9 +310,10 @@ tcp_server_typed& Webserver() {
 			return;
 		}
 
-		kuhspeicher::Default().delete_cow(req.body);
-
-		res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		if (kuhspeicher::Default().delete_cow(req.body))
+			res.res_set_status_line(HTTP_VERSION, STATUS_OK);
+		else
+			res.res_set_status_line(HTTP_VERSION, STATUS_BAD_REQUEST);
 		res.res_add_header("Server", DEFAULT_SERVER);
 		res.res_add_header("Content-Length", "0");
 		res.res_write_body();

@@ -45,6 +45,7 @@ struct kuhspeicher {
 
 	void clear() {
 		LogInfo("Clearing cows");
+		request_problematic_cow_update = true;
 		persistent_storage_t::Default().write(0, &persistent_storage_layout::cows_size);
 	}
 
@@ -218,14 +219,16 @@ struct kuhspeicher {
 	}
 
 	void delete_cow(int i, std::span<kuh> cows) {
-		if (size_t(i) != cows.size() - 1) {
+		if (cows.empty())
+			return;
+		if (size_t(i) != cows.size() - 1)
 			persistent_storage_t::Default().write_array_range(&cows.back(), &persistent_storage_layout::cows, i, i + 1);
-		}
-		if (cows.size())
+		else
 			persistent_storage_t::Default().write(cows.size() - 1, &persistent_storage_layout::cows_size);
+		request_problematic_cow_update = true;
 	}
 
-	void delete_cow(std::string_view name) {
+	bool delete_cow(std::string_view name) {
 		auto cows = cows_view();
 		int dst{-1};
 		for (int i: iota{0, cows.size()}) {
@@ -236,9 +239,10 @@ struct kuhspeicher {
 		}
 		if (dst < 0) {
 			LogError("Failed to find cow {}", name);
-			return;
+			return false;
 		}
 		delete_cow(dst, cows);
+		return true;
 	}
 
 	void set_cow_kraftfutter(std::string_view cow_name, float kraftfutter) {

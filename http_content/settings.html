@@ -8,8 +8,8 @@
 <p class="d"><input id="t2" type="time" value="12:00" onchange="st()"><label for="t2">Uhr, Rationsneustart 2</label>
 <p class="d"><input id="t3" type="time" value="16:00" onchange="st()"><label for="t3">Uhr, Rationsneustart 3</label>
 <p><button onclick="if(tt<3){++tt;ur();st();}">+ Rationsneustart</button> <button onclick="if(tt>1){tt--;ur();st();}">- Rationsneustart</button>
-<p><input id="ra" type="number" value="4" min="1" max="5" onchange="st();"><label for="ra">Rationen</label>
-<p><input id="dt" type="number" value=".5" min=".1" max="50" onchange="st();"><label for="dt">Auswurfzwischenzeit in Sekunden</label>
+<p><input id="ra" type="number" value="4" min="1" max="20" onchange="st();"><label for="ra">Rationen</label>
+<p><input id="dt" type="number" value="10" min=".1" max="50" onchange="st();"><label for="dt">Auswurfzwischenzeit in Sekunden</label>
 <h4>Kuheinstellungen</h4>
 <div style="margin-left:10px">
 <p><input id="kn" class="di"><label for="kn">Kuhname</label>
@@ -63,7 +63,7 @@ async function s(e){
 async function sf(c,k){await parent.sp("kraftfutter",c+" "+k.replace(',','.'));}
 async function dp(c, e){
 	e.preventDefault();
-	if(confirm("Kuh "+c+" wirklich löschen?")){await fetch("cow_entry",{method:"DELETE",body:c});de(c).remove();};
+	if(confirm("Kuh "+c+" wirklich löschen?")){await parent.sp("cow_entry", c.split(':')[1].trim(),"DELETE");de(c).remove();};
 };
 </script>
 </html>
