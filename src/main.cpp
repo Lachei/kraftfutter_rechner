@@ -4,6 +4,7 @@
 
 #include "pico/cyw43_arch.h"
 #include "pico/stdlib.h"
+#include "hardware/watchdog.h"
 
 #include "lwip/ip4_addr.h"
 #include "lwip/apps/mdns.h"
@@ -41,6 +42,7 @@ void recieve_task(void *) {
 void kraftfutter_send_task(void *) {
     LogInfo("Starting kraftfutter communcation task");
     for (;;) {
+        watchdog_update();
         int delay = kraftfutterstation<>::Default().handle_station_communication();
         if (delay)
             vTaskDelay(delay);
@@ -151,6 +153,11 @@ int main( void )
 
     LogInfo("Starting FreeRTOS on all cores.");
     std::cout << "Starting FreeRTOS on all cores\n";
+
+    if (watchdog_enable_caused_reboot()) {
+        LogError("Rebooted by Watchdog!");
+    }
+    watchdog_enable(500/*ms*/, /*Stop on debug mode off*/0);
 
     TaskHandle_t task_startup;
     xTaskCreate(startup_task, "StartupThread", 512, NULL, 0, &task_startup);
