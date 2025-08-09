@@ -5,6 +5,7 @@
 #include "log_storage.h"
 #include "static_types.h"
 #include "persistent_storage.h"
+#include "ranges_util.h"
 
 struct wifi_storage {
 	static constexpr uint32_t DISCOVER_TIMEOUT_US = 6e6; // 6 seconds
@@ -48,14 +49,19 @@ struct wifi_storage {
 	}
 
 	void update_wifi_connection() {
-		wifi_connected = CYW43_LINK_JOIN == cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA);
-		if ((wifi_connected && !wifi_changed) || ssid_wifi.cur_size == 0 || pwd_wifi.cur_size < 8)
+		wifi_connected = CYW43_LINK_UP == cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA);
+		bool wifi_available = wifis | contains{ssid_wifi.sv(), [](const wifi_info &w) { return w.ssid.sv(); }};
+		if ((wifi_connected && !wifi_changed) || ssid_wifi.cur_size == 0 || pwd_wifi.cur_size < 8 || !wifi_available)
 			return;
 
-		LogInfo("Connecting to connect to wifi");
-		if (PICO_OK != cyw43_arch_wifi_connect_async(ssid_wifi.data(), pwd_wifi.data(), CYW43_AUTH_WPA2_AES_PSK)) {
+		if (wifi_changed) {
+			cyw43_arch_disable_sta_mode();
+			cyw43_arch_enable_sta_mode();
+		}
+
+		LogInfo("Connecting to wifi");
+		if (PICO_OK != cyw43_arch_wifi_connect_timeout_ms(ssid_wifi.data(), pwd_wifi.data(), CYW43_AUTH_WPA2_AES_PSK, 5000)) {
 			LogWarning("failed to connect, retry next update_wifi_connection_call()");
-			return;
 		}
 
 		wifi_changed = false;
@@ -100,10 +106,12 @@ struct wifi_storage {
 	}
 
 	/*INTERNAL*/ static int _scan_result(void *, const cyw43_ev_scan_result_t *result) {
-		if (!result)
+		if (!result || result->ssid_len == 0)
 			return 0;
 		// check if already added
-		std::string_view result_ssid{reinterpret_cast<const char *>(result->ssid)};
+		std::string_view result_ssid{reinterpret_cast<const char *>(result->ssid), result->ssid_len};
+		if (result_ssid.size() == 0)
+			return 0;
 		for (auto &wifi: wifi_storage::Default().wifis) {
 			if (wifi.ssid.sv() == result_ssid) {
 				wifi.rssi = (.8 * wifi.rssi) + (.2 * result->rssi);

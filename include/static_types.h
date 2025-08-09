@@ -51,6 +51,7 @@ struct static_string {
 	constexpr int size() const { return cur_size; }
 	constexpr void make_c_str_safe() { if (static_cast<uint32_t>(cur_size) < storage.size()) storage[cur_size] = '\0'; }
 	constexpr void sanitize() { if (cur_size > N || cur_size < 0) cur_size = 0; }
+	constexpr bool operator==(const static_string &o) const { return sv() == o.sv(); }
 };
 
 template<typename T, int N>
