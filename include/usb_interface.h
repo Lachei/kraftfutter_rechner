@@ -134,7 +134,7 @@ static constexpr inline void handle_usb_command(std::istream &in = std::cin, std
 		vPortGetHeapStats(&stats);
 		out << "Available Space : " << stats.xAvailableHeapSpaceInBytes << '\n';
 		out << "Total heap space: " << configTOTAL_HEAP_SIZE << '\n';
-		out << "Total use       : " << int((float(stats.xAvailableHeapSpaceInBytes) / float(configTOTAL_HEAP_SIZE)) * 100.f) << '\n';
+		out << "Total usage %   : " << 100 - int((float(stats.xAvailableHeapSpaceInBytes) / float(configTOTAL_HEAP_SIZE)) * 100.f) << '\n';
 	} else {
 		out << "[ERROR] Command '" << command << "' unknown. Run command 'help' for a list of all available commands\n";
 	}

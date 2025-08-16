@@ -157,7 +157,7 @@ int main( void )
     if (watchdog_enable_caused_reboot()) {
         LogError("Rebooted by Watchdog!");
     }
-    watchdog_enable(500/*ms*/, /*Stop on debug mode off*/0);
+    watchdog_enable(500000/*us*/, /*Stop on debug mode off*/0);
 
     TaskHandle_t task_startup;
     xTaskCreate(startup_task, "StartupThread", 512, NULL, 0, &task_startup);
